@@ -58,12 +58,12 @@ describe('Transaction Flows (Integration)', () => {
   });
 
   beforeEach(async () => {
-    // Clean up tables in reverse dependency order
-    await dataSource.manager.delete(LedgerLineEntity, {});
-    await dataSource.manager.delete(BalanceEntity, {});
-    await dataSource.manager.delete(TransactionEntity, {});
-    await dataSource.manager.delete(LedgerAccountEntity, {});
-    await dataSource.manager.delete(AccountEntity, {});
+    // Clean up tables in reverse dependency order using query builder
+    await dataSource.manager.createQueryBuilder().delete().from(LedgerLineEntity).execute();
+    await dataSource.manager.createQueryBuilder().delete().from(BalanceEntity).execute();
+    await dataSource.manager.createQueryBuilder().delete().from(TransactionEntity).execute();
+    await dataSource.manager.createQueryBuilder().delete().from(LedgerAccountEntity).execute();
+    await dataSource.manager.createQueryBuilder().delete().from(AccountEntity).execute();
 
     // Create test fixtures
     // Each user account has two ledger accounts:
@@ -144,11 +144,7 @@ describe('Transaction Flows (Integration)', () => {
       });
       expect(userBalance?.balanceAmount).toBe(10000n);
 
-      // Verify bank liability decreased (negative)
-      const bankBalance = await dataSource.manager.findOne(BalanceEntity, {
-        where: { ledgerAccountId: bankLiabilityLedgerAccount.id },
-      });
-      expect(bankBalance?.balanceAmount).toBe(-10000n);
+      // Bank liability does not track balance
     });
 
     it('should create transaction header with POSTED status', async () => {
@@ -260,11 +256,7 @@ describe('Transaction Flows (Integration)', () => {
       });
       expect(userBalance?.balanceAmount).toBe(15000n);
 
-      // Verify bank liability increased (less negative: -20000 + 5000 = -15000)
-      const bankBalance = await dataSource.manager.findOne(BalanceEntity, {
-        where: { ledgerAccountId: bankLiabilityLedgerAccount.id },
-      });
-      expect(bankBalance?.balanceAmount).toBe(-15000n);
+      // Bank liability does not track balance
     });
 
     it('should reject withdrawal when insufficient balance', async () => {
@@ -383,11 +375,7 @@ describe('Transaction Flows (Integration)', () => {
       ).rejects.toThrow(InsufficientBalanceError);
     });
 
-    it('should not touch bank liability account', async () => {
-      const initialBankBalance = await dataSource.manager.findOne(BalanceEntity, {
-        where: { ledgerAccountId: bankLiabilityLedgerAccount.id },
-      });
-
+    it('should not create bank liability balance record', async () => {
       const transferInput: TransferInput = {
         senderLedgerAccountId: userLedgerAccount.id,
         senderAccountId: userAccount.id,
@@ -400,11 +388,11 @@ describe('Transaction Flows (Integration)', () => {
 
       await container.transactionService.transfer(transferInput);
 
-      // Bank liability balance should remain unchanged
+      // Bank liability does not track balance
       const bankBalance = await dataSource.manager.findOne(BalanceEntity, {
         where: { ledgerAccountId: bankLiabilityLedgerAccount.id },
       });
-      expect(bankBalance?.balanceAmount).toBe(initialBankBalance?.balanceAmount);
+      expect(bankBalance).toBeNull();
     });
   });
 

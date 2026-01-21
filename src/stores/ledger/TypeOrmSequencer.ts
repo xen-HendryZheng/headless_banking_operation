@@ -17,14 +17,7 @@ export class TypeOrmSequencer implements Sequencer {
       .setLock("pessimistic_write") // Lock balance row for update
       .getRawOne();
 
-    let nextSequence: number;
-    if (result) {
-      nextSequence = result.last_sequence + 1;
-    } else {
-      // throw error if balance record not found
-      throw new Error(`Balance record not found for ledgerAccountId: ${ledgerAccountId}`);
-    }
-
-    return nextSequence;
+    // If balance exists, return last_sequence + 1, otherwise return 1 (first transaction)
+    return result ? result.last_sequence + 1 : 1;
   }
 }

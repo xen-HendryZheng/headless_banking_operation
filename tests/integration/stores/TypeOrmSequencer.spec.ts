@@ -1,7 +1,6 @@
 import { DataSource, QueryRunner } from 'typeorm';
 import { TypeOrmSequencer } from '../../../src/stores/ledger/TypeOrmSequencer';
-import { TypeOrmLedgerLineStore } from '../../../src/stores/ledger/TypeOrmLedgerLineStore';
-import { LedgerLineInsert } from '../../../src/services/ledger/LedgerLineStore';
+import { TypeOrmBalanceStore } from '../../../src/stores/balance/TypeOrmBalanceStore';
 import { AccountEntity } from '../../../src/stores/entities/AccountEntity';
 import { LedgerAccountEntity } from '../../../src/stores/entities/LedgerAccountEntity';
 import { TransactionEntity } from '../../../src/stores/entities/TransactionEntity';
@@ -20,13 +19,12 @@ describe('TypeOrmSequencer (Integration)', () => {
   let dataSource: DataSource;
   let queryRunner: QueryRunner;
   let sequencer: TypeOrmSequencer;
-  let ledgerLineStore: TypeOrmLedgerLineStore;
+  let balanceStore: TypeOrmBalanceStore;
 
   // Test fixture data
   let testAccount: AccountEntity;
   let testLedgerAccount1: LedgerAccountEntity;
   let testLedgerAccount2: LedgerAccountEntity;
-  let testTransaction: TransactionEntity;
 
   beforeAll(async () => {
     dataSource = new DataSource({
@@ -49,7 +47,7 @@ describe('TypeOrmSequencer (Integration)', () => {
 
     await dataSource.initialize();
     sequencer = new TypeOrmSequencer();
-    ledgerLineStore = new TypeOrmLedgerLineStore();
+    balanceStore = new TypeOrmBalanceStore();
   });
 
   afterAll(async () => {
@@ -87,20 +85,6 @@ describe('TypeOrmSequencer (Integration)', () => {
       status: LedgerAccountStatus.ACTIVE,
     });
     await queryRunner.manager.save(testLedgerAccount2);
-
-    testTransaction = queryRunner.manager.create(TransactionEntity, {
-      ledgerAccountId: testLedgerAccount1.id,
-      counterpartyLedgerAccountId: null,
-      type: TransactionType.DEPOSIT,
-      currency: 'USD',
-      isCredit: true,
-      amount: 10000n,
-      reference: `DEP-${Date.now()}-${Math.random()}`,
-      description: 'Test deposit',
-      status: TransactionStatus.PENDING,
-      accountId: testAccount.id,
-    });
-    await queryRunner.manager.save(testTransaction);
   });
 
   afterEach(async () => {
@@ -111,27 +95,16 @@ describe('TypeOrmSequencer (Integration)', () => {
   });
 
   describe('getNextSequence', () => {
-    it('should return 1 for first sequence of new ledger account', async () => {
+    it('should return 1 for ledger account without balance record', async () => {
+      // No balance record exists yet
       const result = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
 
       expect(result).toBe(1);
     });
 
-    it('should return incrementing sequence for existing ledger account', async () => {
-      // Insert some ledger lines with sequences
-      const lines: LedgerLineInsert[] = [
-        {
-          transactionId: testTransaction.id,
-          ledgerAccountId: testLedgerAccount1.id,
-          accountId: testAccount.id,
-          debit: 0n,
-          credit: 1000n,
-          amount: 1000n,
-          subtype: 'PRINCIPAL',
-          sequence: 1,
-        },
-      ];
-      await ledgerLineStore.insert(lines, queryRunner);
+    it('should return incrementing sequence for existing balance record', async () => {
+      // Create a balance record with sequence 1
+      await balanceStore.insert(testLedgerAccount1.id, 1000n, 1, queryRunner);
 
       // Get next sequence
       const result = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
@@ -139,68 +112,9 @@ describe('TypeOrmSequencer (Integration)', () => {
       expect(result).toBe(2);
     });
 
-    it('should handle multiple sequences correctly', async () => {
-      // Create multiple transactions
-      const testTransaction2 = queryRunner.manager.create(TransactionEntity, {
-        ledgerAccountId: testLedgerAccount1.id,
-        counterpartyLedgerAccountId: null,
-        type: TransactionType.DEPOSIT,
-        currency: 'USD',
-        isCredit: true,
-        amount: 5000n,
-        reference: `DEP-${Date.now()}-2-${Math.random()}`,
-        status: TransactionStatus.PENDING,
-        accountId: testAccount.id,
-      });
-      await queryRunner.manager.save(testTransaction2);
-
-      const testTransaction3 = queryRunner.manager.create(TransactionEntity, {
-        ledgerAccountId: testLedgerAccount1.id,
-        counterpartyLedgerAccountId: null,
-        type: TransactionType.DEPOSIT,
-        currency: 'USD',
-        isCredit: true,
-        amount: 3000n,
-        reference: `DEP-${Date.now()}-3-${Math.random()}`,
-        status: TransactionStatus.PENDING,
-        accountId: testAccount.id,
-      });
-      await queryRunner.manager.save(testTransaction3);
-
-      // Insert ledger lines with increasing sequences
-      const lines: LedgerLineInsert[] = [
-        {
-          transactionId: testTransaction.id,
-          ledgerAccountId: testLedgerAccount1.id,
-          accountId: testAccount.id,
-          debit: 0n,
-          credit: 1000n,
-          amount: 1000n,
-          subtype: 'PRINCIPAL',
-          sequence: 1,
-        },
-        {
-          transactionId: testTransaction2.id,
-          ledgerAccountId: testLedgerAccount1.id,
-          accountId: testAccount.id,
-          debit: 0n,
-          credit: 5000n,
-          amount: 5000n,
-          subtype: 'PRINCIPAL',
-          sequence: 2,
-        },
-        {
-          transactionId: testTransaction3.id,
-          ledgerAccountId: testLedgerAccount1.id,
-          accountId: testAccount.id,
-          debit: 0n,
-          credit: 3000n,
-          amount: 3000n,
-          subtype: 'PRINCIPAL',
-          sequence: 3,
-        },
-      ];
-      await ledgerLineStore.insert(lines, queryRunner);
+    it('should handle multiple balance updates correctly', async () => {
+      // Create a balance record with sequence 3 (simulating 3 transactions)
+      await balanceStore.insert(testLedgerAccount1.id, 9000n, 3, queryRunner);
 
       // Get next sequence
       const result = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
@@ -209,27 +123,12 @@ describe('TypeOrmSequencer (Integration)', () => {
     });
 
     it('should handle concurrent sequence requests safely', async () => {
-      // This test verifies that even when called multiple times in sequence,
-      // the sequencer returns correct values based on the current state
-
-      // First call - should return 1 for new account
+      // First call - should return 1 for account without balance
       const seq1 = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
       expect(seq1).toBe(1);
 
-      // Insert a line with sequence 1
-      const lines1: LedgerLineInsert[] = [
-        {
-          transactionId: testTransaction.id,
-          ledgerAccountId: testLedgerAccount1.id,
-          accountId: testAccount.id,
-          debit: 0n,
-          credit: 1000n,
-          amount: 1000n,
-          subtype: 'PRINCIPAL',
-          sequence: 1,
-        },
-      ];
-      await ledgerLineStore.insert(lines1, queryRunner);
+      // Create balance with sequence 1
+      await balanceStore.insert(testLedgerAccount1.id, 1000n, 1, queryRunner);
 
       // Second call - should return 2 now
       const seq2 = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
@@ -241,46 +140,10 @@ describe('TypeOrmSequencer (Integration)', () => {
     });
 
     it('should return correct sequence for ledger account with gap in sequences', async () => {
-      // Create multiple transactions
-      const testTransaction2 = queryRunner.manager.create(TransactionEntity, {
-        ledgerAccountId: testLedgerAccount1.id,
-        counterpartyLedgerAccountId: null,
-        type: TransactionType.DEPOSIT,
-        currency: 'USD',
-        isCredit: true,
-        amount: 5000n,
-        reference: `DEP-${Date.now()}-2-${Math.random()}`,
-        status: TransactionStatus.PENDING,
-        accountId: testAccount.id,
-      });
-      await queryRunner.manager.save(testTransaction2);
+      // Balance record with sequence 10 (simulating gap)
+      await balanceStore.insert(testLedgerAccount1.id, 6000n, 10, queryRunner);
 
-      // Insert ledger lines with gaps in sequences
-      const lines: LedgerLineInsert[] = [
-        {
-          transactionId: testTransaction.id,
-          ledgerAccountId: testLedgerAccount1.id,
-          accountId: testAccount.id,
-          debit: 0n,
-          credit: 1000n,
-          amount: 1000n,
-          subtype: 'PRINCIPAL',
-          sequence: 1,
-        },
-        {
-          transactionId: testTransaction2.id,
-          ledgerAccountId: testLedgerAccount1.id,
-          accountId: testAccount.id,
-          debit: 0n,
-          credit: 5000n,
-          amount: 5000n,
-          subtype: 'PRINCIPAL',
-          sequence: 10, // Gap in sequence
-        },
-      ];
-      await ledgerLineStore.insert(lines, queryRunner);
-
-      // Get next sequence - should be MAX(sequence) + 1
+      // Get next sequence - should be last_sequence + 1
       const result = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
 
       expect(result).toBe(11);

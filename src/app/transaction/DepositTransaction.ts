@@ -1,5 +1,5 @@
-import { DataSource } from 'typeorm';
-import { BaseTransactionCore } from './BaseTransactionCore';
+import { DataSource, QueryRunner } from 'typeorm';
+import { BaseTransactionCore, TxResult } from './BaseTransactionCore';
 import { UUID, Currency } from '../../domain/common/Types';
 import { JournalDraft, LedgerLine } from '../../domain/ledger/LedgerTypes';
 import { LedgerService } from '../../services/ledger/LedgerService';
@@ -49,7 +49,26 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
     return 'DepositTransaction';
   }
 
-  private readonly queryRunner;
+  private queryRunner!: QueryRunner;
+  /**
+   * Override execute to manage database transaction lifecycle.
+   */
+  async execute(input: DepositInput): Promise<TxResult> {
+    
+    await this.queryRunner.connect();
+    await this.queryRunner.startTransaction();
+
+    try {
+      const result = await super.execute(input);
+      await this.queryRunner.commitTransaction();
+      return result;
+    } catch (error) {
+      await this.queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await this.queryRunner.release();
+    }
+  }
 
   validate(input: DepositInput): Promise<void> {
     if (input.amount <= 0n) {
@@ -80,7 +99,7 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
       description: input.description
     };
 
-    const header =  await this.transactionStore.createHeader(transactionInput, this.queryRunner);
+    const header = await this.transactionStore.createHeader(transactionInput, this.queryRunner);
     return header.id;
   }
 
@@ -97,33 +116,40 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
         {
           ledgerAccountId: input.bankLiabilityLedgerAccountId,
           accountId: input.userAccountId,
-          debit: latestBankLiabilityLine ? latestBankLiabilityLine.debit + input.amount : input.amount,
-          credit: latestBankLiabilityLine ? latestBankLiabilityLine.credit : 0n,
+          debit: (latestBankLiabilityLine?.debit ?? 0n) + input.amount,
+          credit: latestBankLiabilityLine?.credit ?? 0n,
+          amount: input.amount,
+          isDebit: true,
         },
         {
           ledgerAccountId: input.userLedgerAccountId,
           accountId: input.userAccountId,
-          debit: latestUserCashLine ? latestUserCashLine.debit : 0n,
-          credit: latestUserCashLine ? latestUserCashLine.credit + input.amount : input.amount,
+          debit: latestUserCashLine?.debit ?? 0n,
+          credit: (latestUserCashLine?.credit ?? 0n) + input.amount,
+          amount: input.amount,
+          isDebit: false,
         },
       ],
     };
   }
 
   protected async postLedger(journal: JournalDraft): Promise<LedgerLine[]> {
-    const ledgerLines = await this.ledgerService.post(journal, this.queryRunner);
-    return ledgerLines;
+    return this.ledgerService.post(journal, this.queryRunner);
   }
 
   protected async updateBalances(ledgerLines: LedgerLine[]): Promise<void> {
-    const balanceDelta = ledgerLines.map((line) => {
-      const delta = line.credit - line.debit;
-      return {
-        ledgerAccountId: line.ledgerAccountId,
-        delta,
-        newSequence: line.sequence,
-      };
-    });
+    // Only update balance for user cash accounts, not bank liability accounts
+    // User line is the second one (index 1)
+    const userLedgerLine = ledgerLines[1];
+    if (!userLedgerLine) {
+      return;
+    }
+
+    const balanceDelta = [{
+      ledgerAccountId: userLedgerLine.ledgerAccountId,
+      delta: userLedgerLine.amount, // Positive delta for deposit
+      newSequence: userLedgerLine.sequence,
+    }];
 
     await this.balanceService.apply(balanceDelta, this.queryRunner);
   }

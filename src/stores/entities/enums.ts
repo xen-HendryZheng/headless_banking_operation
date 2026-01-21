@@ -46,12 +46,3 @@ export enum TransactionStatus {
   POSTED = 'POSTED',
   FAILED = 'FAILED',
 }
-
-/**
- * Ledger line subtype enum.
- */
-export enum LineSubtype {
-  PRINCIPAL = 'PRINCIPAL',
-  FEE = 'FEE',
-  REVERSAL = 'REVERSAL',
-}

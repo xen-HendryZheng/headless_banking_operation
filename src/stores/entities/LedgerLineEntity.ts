@@ -7,7 +7,6 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { LineSubtype } from './enums';
 import { BigIntTransformer } from '../transformers/BigIntTransformer';
 import { TransactionEntity } from './TransactionEntity';
 import { LedgerAccountEntity } from './LedgerAccountEntity';
@@ -36,9 +35,6 @@ export class LedgerLineEntity {
 
   @Column({ type: 'bigint', transformer: new BigIntTransformer() })
   amount!: bigint;
-
-  @Column({ type: 'enum', enum: LineSubtype })
-  subtype!: LineSubtype;
 
   @Column({ type: 'integer' })
   sequence!: number;

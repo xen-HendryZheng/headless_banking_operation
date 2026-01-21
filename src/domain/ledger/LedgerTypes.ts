@@ -8,6 +8,10 @@ export interface LedgerLineDraft {
   accountId: UUID;
   debit: bigint;
   credit: bigint;
+  /** Transaction amount for this line (used for balance validation) */
+  amount: bigint;
+  /** Whether this line is a debit (true) or credit (false) for this transaction */
+  isDebit: boolean;
 }
 
 /**
@@ -22,11 +26,16 @@ export interface JournalDraft {
 
 /**
  * Persisted ledger line with id and sequence.
+ * Note: Does not extend LedgerLineDraft since isDebit is only used for validation.
  */
-export interface LedgerLine extends LedgerLineDraft {
+export interface LedgerLine {
   id: UUID;
   transactionId: UUID;
-  sequence: number;
+  ledgerAccountId: UUID;
+  accountId: UUID;
+  debit: bigint;
+  credit: bigint;
   amount: bigint;
+  sequence: number;
   createdAt: Date;
 }

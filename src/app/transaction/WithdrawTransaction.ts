@@ -1,11 +1,11 @@
-import { DataSource } from 'typeorm';
-import { BaseTransactionCore } from './BaseTransactionCore';
+import { DataSource, QueryRunner } from 'typeorm';
+import { BaseTransactionCore, TxResult } from './BaseTransactionCore';
 import { UUID, Currency } from '../../domain/common/Types';
 import { JournalDraft, LedgerLine } from '../../domain/ledger/LedgerTypes';
 import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
 import { CreateTransactionInput, TransactionStore } from '../../services/transaction/TransactionStore';
-import { InvalidTransactionError } from '@domain/common';
+import { InvalidTransactionError, InsufficientBalanceError } from '@domain/common';
 import { TransactionType } from 'stores';
 
 /**
@@ -49,11 +49,30 @@ export class WithdrawTransaction extends BaseTransactionCore<WithdrawInput> {
     return 'WithdrawTransaction';
   }
 
-  private readonly queryRunner;
+  private queryRunner!: QueryRunner;
 
-  validate(input: WithdrawInput): Promise<void> {
+  /**
+   * Override execute to manage database transaction lifecycle.
+   */
+  async execute(input: WithdrawInput): Promise<TxResult> {
+    await this.queryRunner.connect();
+    await this.queryRunner.startTransaction();
+
+    try {
+      const result = await super.execute(input);
+      await this.queryRunner.commitTransaction();
+      return result;
+    } catch (error) {
+      await this.queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await this.queryRunner.release();
+    }
+  }
+
+  async validate(input: WithdrawInput): Promise<void> {
     if (input.amount <= 0n) {
-      throw new Error('Amount must be greater than zero');
+      throw new InvalidTransactionError('Amount must be greater than zero');
     }
 
     if (!input.userLedgerAccountId || input.userLedgerAccountId.trim().length === 0) {
@@ -64,7 +83,12 @@ export class WithdrawTransaction extends BaseTransactionCore<WithdrawInput> {
       throw new InvalidTransactionError('Invalid bank liability ledger account');
     }
 
-    return Promise.resolve();
+    // Get the current balance and ensure sufficient funds
+    const currentBalance = await this.balanceService.getBalance(input.userLedgerAccountId, this.queryRunner);
+    const availableAmount = currentBalance ? currentBalance.balanceAmount : 0n;
+    if (availableAmount < input.amount) {
+      throw new InsufficientBalanceError('Insufficient funds for withdrawal');
+    }
   }
 
   protected async createTransactionHeader(input: WithdrawInput): Promise<UUID> {
@@ -82,7 +106,6 @@ export class WithdrawTransaction extends BaseTransactionCore<WithdrawInput> {
 
     const header = await this.transactionStore.createHeader(transactionInput, this.queryRunner);
     return header.id;
-
   }
 
   protected async buildJournal(txId: UUID, input: WithdrawInput): Promise<JournalDraft> {
@@ -98,33 +121,40 @@ export class WithdrawTransaction extends BaseTransactionCore<WithdrawInput> {
         {
           ledgerAccountId: input.bankLiabilityLedgerAccountId,
           accountId: input.userAccountId,
-          debit: latestBankLiabilityLine ? latestBankLiabilityLine.debit : 0n,
-          credit: latestBankLiabilityLine ? latestBankLiabilityLine.credit + input.amount : input.amount,
+          debit: latestBankLiabilityLine?.debit ?? 0n,
+          credit: (latestBankLiabilityLine?.credit ?? 0n) + input.amount,
+          amount: input.amount,
+          isDebit: false,
         },
         {
           ledgerAccountId: input.userLedgerAccountId,
           accountId: input.userAccountId,
-          debit: latestUserCashLine ? latestUserCashLine.debit + input.amount : input.amount,
-          credit: latestUserCashLine ? latestUserCashLine.credit : 0n,
+          debit: (latestUserCashLine?.debit ?? 0n) + input.amount,
+          credit: latestUserCashLine?.credit ?? 0n,
+          amount: input.amount,
+          isDebit: true,
         },
       ],
     };
   }
 
   protected async postLedger(journal: JournalDraft): Promise<LedgerLine[]> {
-    const ledgerLines = await this.ledgerService.post(journal, this.queryRunner);
-    return ledgerLines;
+    return this.ledgerService.post(journal, this.queryRunner);
   }
 
   protected async updateBalances(ledgerLines: LedgerLine[]): Promise<void> {
-    const balanceDelta = ledgerLines.map((line) => {
-      const delta = line.credit - line.debit;
-      return {
-        ledgerAccountId: line.ledgerAccountId,
-        delta,
-        newSequence: line.sequence,
-      };
-    });
+    // Only update balance for user cash accounts, not bank liability accounts
+    // User line is the second one (index 1)
+    const userLedgerLine = ledgerLines[1];
+    if (!userLedgerLine) {
+      return;
+    }
+
+    const balanceDelta = [{
+      ledgerAccountId: userLedgerLine.ledgerAccountId,
+      delta: -userLedgerLine.amount, // Negative delta for withdrawal
+      newSequence: userLedgerLine.sequence,
+    }];
 
     await this.balanceService.apply(balanceDelta, this.queryRunner);
   }

@@ -36,7 +36,7 @@ export class LedgerServiceImpl implements LedgerService {
       accountId: line.accountId,
       debit: line.debit,
       credit: line.credit,
-      amount: line.debit !== 0n ? line.debit : line.credit,
+      amount: line.amount,
       sequence: sequences[index],
     }));
 

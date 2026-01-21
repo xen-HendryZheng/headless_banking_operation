@@ -12,6 +12,7 @@ export class TypeOrmLedgerLineStore implements LedgerLineStore {
     const entities = lines.map(line => {
       const entity = new LedgerLineEntity();
       entity.ledgerAccountId = line.ledgerAccountId;
+      entity.accountId = line.accountId;
       entity.transactionId = line.transactionId;
       entity.sequence = line.sequence;
       entity.amount = line.amount;
@@ -39,6 +40,7 @@ export class TypeOrmLedgerLineStore implements LedgerLineStore {
   ): Promise<LedgerLine[]> {
     return queryRunner.manager.find(LedgerLineEntity, {
       where: { ledgerAccountId },
+      order: { sequence: 'ASC' },
     }).then(entities => entities.map(entity => this.mapToLedgerLine(entity)));
   }
 
@@ -58,7 +60,7 @@ export class TypeOrmLedgerLineStore implements LedgerLineStore {
   private mapToLedgerLine(entity: LedgerLineEntity): LedgerLine {
     return {
       id: entity.id as UUID,
-      accountId: entity.ledgerAccountId,
+      accountId: entity.accountId,
       credit: entity.credit,
       debit: entity.debit,
       amount: entity.amount,

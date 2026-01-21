@@ -18,11 +18,15 @@ export class TypeOrmTransactionStore implements TransactionStore {
   ): Promise<TransactionHeader> {
 
     const transactionEntity = new TransactionEntity();
+    transactionEntity.ledgerAccountId = input.ledgerAccountId;
+    transactionEntity.accountId = input.accountId;
     transactionEntity.type = input.type;
-    transactionEntity.status = TransactionStatus.PENDING;
+    transactionEntity.status = TransactionStatus.POSTED;
+    transactionEntity.isCredit = input.isCredit;
     transactionEntity.amount = input.amount;
     transactionEntity.currency = input.currency;
     transactionEntity.reference = input.reference;
+    transactionEntity.description = input.description || null;
     transactionEntity.counterpartyLedgerAccountId = input.counterpartyLedgerAccountId || null;
 
     await queryRunner.manager.save(transactionEntity);

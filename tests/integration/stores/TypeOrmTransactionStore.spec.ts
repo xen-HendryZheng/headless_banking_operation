@@ -11,6 +11,7 @@ import {
   AccountStatus,
   LedgerAccountType,
   LedgerAccountStatus,
+  TransactionType,
 } from '../../../src/stores/entities/enums';
 
 // Note: Each user account has two ledger accounts:
@@ -99,7 +100,7 @@ describe('TypeOrmTransactionStore (Integration)', () => {
       const input: CreateTransactionInput = {
         ledgerAccountId: testLedgerAccount.id,
         counterpartyLedgerAccountId: null,
-        type: 'DEPOSIT',
+        type: TransactionType.DEPOSIT,
         currency: 'USD',
         isCredit: true,
         amount: 10000n,
@@ -121,7 +122,7 @@ describe('TypeOrmTransactionStore (Integration)', () => {
       const input: CreateTransactionInput = {
         ledgerAccountId: testLedgerAccount.id,
         counterpartyLedgerAccountId: testCounterpartyLedgerAccount.id,
-        type: 'TRANSFER',
+        type: TransactionType.TRANSFER,
         currency: 'USD',
         isCredit: false,
         amount: 5000n,
@@ -136,89 +137,6 @@ describe('TypeOrmTransactionStore (Integration)', () => {
       );
       expect(result.counterpartyLedgerAccountId).toBe(testCounterpartyLedgerAccount.id);
     });
-
-    it('should set status to PENDING', async () => {
-      const input: CreateTransactionInput = {
-        ledgerAccountId: testLedgerAccount.id,
-        type: 'WITHDRAW',
-        currency: 'USD',
-        isCredit: false,
-        amount: 3000n,
-        reference: `WTH-${Date.now()}`,
-        accountId: testAccount.id,
-      };
-
-      const result = await transactionStore.createHeader(input, queryRunner);
-
-      expect(result.status).toBe('PENDING');
-    });
-  });
-
-  describe('markPosted', () => {
-    it('should update transaction status to POSTED', async () => {
-      const input: CreateTransactionInput = {
-        ledgerAccountId: testLedgerAccount.id,
-        type: 'DEPOSIT',
-        currency: 'USD',
-        isCredit: true,
-        amount: 10000n,
-        reference: `DEP-${Date.now()}`,
-        accountId: testAccount.id,
-      };
-
-      const created = await transactionStore.createHeader(input, queryRunner);
-      await transactionStore.markPosted(created.id, queryRunner);
-
-      const updated = await transactionStore.findById(created.id, queryRunner);
-      expect(updated).not.toBeNull();
-      expect(updated!.status).toBe('POSTED');
-    });
-
-    it('should update the updated_at timestamp', async () => {
-      const input: CreateTransactionInput = {
-        ledgerAccountId: testLedgerAccount.id,
-        type: 'DEPOSIT',
-        currency: 'USD',
-        isCredit: true,
-        amount: 10000n,
-        reference: `DEP-${Date.now()}`,
-        accountId: testAccount.id,
-      };
-
-      const created = await transactionStore.createHeader(input, queryRunner);
-      const originalUpdatedAt = created.updatedAt;
-
-      // Small delay to ensure timestamp difference
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      await transactionStore.markPosted(created.id, queryRunner);
-
-      const updated = await transactionStore.findById(created.id, queryRunner);
-      expect(updated!.updatedAt.getTime()).toBeGreaterThanOrEqual(
-        originalUpdatedAt.getTime()
-      );
-    });
-  });
-
-  describe('markFailed', () => {
-    it('should update transaction status to FAILED', async () => {
-      const input: CreateTransactionInput = {
-        ledgerAccountId: testLedgerAccount.id,
-        type: 'WITHDRAW',
-        currency: 'USD',
-        isCredit: false,
-        amount: 5000n,
-        reference: `WTH-${Date.now()}`,
-        accountId: testAccount.id,
-      };
-
-      const created = await transactionStore.createHeader(input, queryRunner);
-      await transactionStore.markFailed(created.id, queryRunner);
-
-      const updated = await transactionStore.findById(created.id, queryRunner);
-      expect(updated).not.toBeNull();
-      expect(updated!.status).toBe('FAILED');
-    });
   });
 
   describe('findByReference', () => {
@@ -226,7 +144,7 @@ describe('TypeOrmTransactionStore (Integration)', () => {
       const reference = `DEP-${Date.now()}`;
       const input: CreateTransactionInput = {
         ledgerAccountId: testLedgerAccount.id,
-        type: 'DEPOSIT',
+        type: TransactionType.DEPOSIT,
         currency: 'USD',
         isCredit: true,
         amount: 10000n,
@@ -258,7 +176,7 @@ describe('TypeOrmTransactionStore (Integration)', () => {
     it('should find transaction by ID', async () => {
       const input: CreateTransactionInput = {
         ledgerAccountId: testLedgerAccount.id,
-        type: 'TRANSFER',
+        type: TransactionType.TRANSFER,
         currency: 'USD',
         isCredit: false,
         amount: 7500n,

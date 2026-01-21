@@ -4,6 +4,7 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.spec.ts'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@app/(.*)$': '<rootDir>/src/app/$1',
     '^@domain/(.*)$': '<rootDir>/src/domain/$1',
@@ -11,6 +12,7 @@ module.exports = {
     '^@infrastructure/(.*)$': '<rootDir>/src/infrastructure/$1',
     '^@bootstrap/(.*)$': '<rootDir>/src/bootstrap/$1',
     '^stores$': '<rootDir>/src/stores',
+    '^stores/(.*)$': '<rootDir>/src/stores/$1',
     '^@domain/common$': '<rootDir>/src/domain/common',
   },
   collectCoverageFrom: [

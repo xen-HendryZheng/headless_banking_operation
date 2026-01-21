@@ -28,16 +28,26 @@ export class BalanceServiceImpl implements BalanceService {
     const updatedRecords: BalanceRecord[] = [];
 
     for (const delta of deltas) {
-      const currentBalance = balanceMap.get(delta.ledgerAccountId)?.balanceAmount ?? 0n;
+      const existingBalance = balanceMap.get(delta.ledgerAccountId);
+      const currentBalance = existingBalance?.balanceAmount ?? 0n;
       this.balanceRules.assertNoNegative(currentBalance, delta.delta);
 
       const newBalance = currentBalance + delta.delta;
-      const updated = await this.balanceStore.updateBalance(
-        delta.ledgerAccountId,
-        newBalance,
-        delta.newSequence,
-        queryRunner
-      );
+
+      // Use insert for new balance records, update for existing ones
+      const updated = existingBalance
+        ? await this.balanceStore.updateBalance(
+            delta.ledgerAccountId,
+            newBalance,
+            delta.newSequence,
+            queryRunner
+          )
+        : await this.balanceStore.insert(
+            delta.ledgerAccountId,
+            newBalance,
+            delta.newSequence,
+            queryRunner
+          );
 
       balanceMap.set(delta.ledgerAccountId, updated);
       updatedRecords.push(updated);

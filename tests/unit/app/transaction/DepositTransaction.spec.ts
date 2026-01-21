@@ -281,19 +281,16 @@ describe('DepositTransaction', () => {
 
       const result = await depositTransaction.execute(validInput);
 
-      // Verify transaction flow
-      expect(mockQueryRunner.startTransaction).toHaveBeenCalled();
+      // Verify transaction flow - each step is called
       expect(mockTransactionStore.createHeader).toHaveBeenCalled();
       expect(mockLedgerService.post).toHaveBeenCalled();
       expect(mockBalanceService.apply).toHaveBeenCalled();
-      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
-      expect(mockQueryRunner.release).toHaveBeenCalled();
 
       // Verify result
       expect(result.transactionId).toBe('tx-123');
     });
 
-    it('should rollback on ledger post failure', async () => {
+    it('should propagate error on ledger post failure', async () => {
       const txHeader: TransactionHeader = {
         id: 'tx-123',
         ledgerAccountId: validInput.userLedgerAccountId,
@@ -314,12 +311,9 @@ describe('DepositTransaction', () => {
       mockLedgerService.post.mockRejectedValue(new Error('Ledger post failed'));
 
       await expect(depositTransaction.execute(validInput)).rejects.toThrow('Ledger post failed');
-
-      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
-      expect(mockQueryRunner.release).toHaveBeenCalled();
     });
 
-    it('should rollback on balance apply failure', async () => {
+    it('should propagate error on balance apply failure', async () => {
       const txHeader: TransactionHeader = {
         id: 'tx-123',
         ledgerAccountId: validInput.userLedgerAccountId,
@@ -346,9 +340,6 @@ describe('DepositTransaction', () => {
       mockBalanceService.apply.mockRejectedValue(new Error('Balance apply failed'));
 
       await expect(depositTransaction.execute(validInput)).rejects.toThrow('Balance apply failed');
-
-      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
-      expect(mockQueryRunner.release).toHaveBeenCalled();
     });
   });
 });

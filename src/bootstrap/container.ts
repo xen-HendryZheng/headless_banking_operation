@@ -17,9 +17,6 @@ import { TypeOrmAccountStore } from '../stores/account/TypeOrmAccountStore';
 import { TypeOrmLedgerAccountStore } from '../stores/account/TypeOrmLedgerAccountStore';
 
 // Application
-import { DepositTransaction } from '../app/transaction/DepositTransaction';
-import { WithdrawTransaction } from '../app/transaction/WithdrawTransaction';
-import { TransferTransaction } from '../app/transaction/TransferTransaction';
 import { TransactionService } from '../app/transaction/TransactionService';
 import { AccountService, AccountServiceImpl } from '../services/account';
 
@@ -53,31 +50,12 @@ export async function createContainer(dataSource: DataSource): Promise<Container
   const ledgerService = new LedgerServiceImpl(ledgerRules, ledgerLineStore, sequencer);
   const balanceService = new BalanceServiceImpl(balanceRules, balanceStore);
 
-  // 4. Create transaction use-cases (application layer)
-  const depositTransaction = new DepositTransaction(
-    transactionStore,
-    ledgerService,
-    balanceService,
-    dataSource
-  );
-  const withdrawTransaction = new WithdrawTransaction(
-    transactionStore,
-    ledgerService,
-    balanceService,
-    dataSource
-  );
-  const transferTransaction = new TransferTransaction(
-    transactionStore,
-    ledgerService,
-    balanceService,
-    dataSource
-  );
-
-  // 5. Create facades
+  // 4. Create facades (transaction instances are created per-call for concurrency support)
   const transactionService = new TransactionService(
-    depositTransaction,
-    withdrawTransaction,
-    transferTransaction
+    transactionStore,
+    ledgerService,
+    balanceService,
+    dataSource
   );
 
   const accountService = new AccountServiceImpl(

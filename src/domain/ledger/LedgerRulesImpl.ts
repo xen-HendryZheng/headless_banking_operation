@@ -15,8 +15,11 @@ export class LedgerRulesImpl implements LedgerRules {
 
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
-      debitTotal += line.debit;
-      creditTotal += line.credit;
+      if (line.isDebit) {
+        debitTotal += line.amount;
+      } else {
+        creditTotal += line.amount;
+      }
     }
 
     if (debitTotal !== creditTotal) {
@@ -24,21 +27,19 @@ export class LedgerRulesImpl implements LedgerRules {
     }
   }
 
-  // Validates that each ledger line is valid according to double-entry rules
-  // - Exactly one of debit or credit must be non-zero
-  // - Amounts must be non-negative
+  // Validates that each ledger line has non-negative amounts
+  // With cumulative tracking, both debit and credit can be positive
   assertValidLines(lines: LedgerLineDraft[]): void {
     for (let i = 0; i < lines.length; i += 1) {
       const { debit, credit } = lines[i];
 
+      // Amounts must be non-negative
       if (debit < 0n || credit < 0n) {
         throw new InvalidLedgerLineError();
       }
 
-      const hasDebit = debit !== 0n;
-      const hasCredit = credit !== 0n;
-
-      if (hasDebit === hasCredit) {
+      // At least one of debit or credit must be positive
+      if (debit === 0n && credit === 0n) {
         throw new InvalidLedgerLineError();
       }
     }
