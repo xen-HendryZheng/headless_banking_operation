@@ -125,10 +125,8 @@ describe('Transaction Flows (Integration)', () => {
   describe('Deposit Flow', () => {
     it('should complete deposit and update balances correctly', async () => {
       const depositInput: DepositInput = {
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 10000n,
+        accountId: userAccount.id,
+        amount: 10000n,
         currency: 'USD',
         reference: `DEP-${Date.now()}`,
         description: 'Test deposit',
@@ -149,10 +147,8 @@ describe('Transaction Flows (Integration)', () => {
 
     it('should create transaction header with POSTED status', async () => {
       const depositInput: DepositInput = {
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 5000n,
+        accountId: userAccount.id,
+        amount: 5000n,
         currency: 'USD',
         reference: `DEP-${Date.now()}`,
       };
@@ -171,10 +167,8 @@ describe('Transaction Flows (Integration)', () => {
 
     it('should create balanced ledger lines', async () => {
       const depositInput: DepositInput = {
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 7500n,
+        accountId: userAccount.id,
+        amount: 7500n,
         currency: 'USD',
         reference: `DEP-${Date.now()}`,
       };
@@ -197,10 +191,8 @@ describe('Transaction Flows (Integration)', () => {
     it('should handle idempotent requests (same reference)', async () => {
       const reference = `DEP-IDEM-${Date.now()}`;
       const depositInput: DepositInput = {
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 10000n,
+        accountId: userAccount.id,
+        amount: 10000n,
         currency: 'USD',
         reference,
       };
@@ -226,10 +218,8 @@ describe('Transaction Flows (Integration)', () => {
     beforeEach(async () => {
       // Seed user with initial balance via deposit
       const depositInput: DepositInput = {
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 20000n,
+        accountId: userAccount.id,
+        amount: 20000n,
         currency: 'USD',
         reference: `SEED-${Date.now()}`,
       };
@@ -238,10 +228,8 @@ describe('Transaction Flows (Integration)', () => {
 
     it('should complete withdrawal and update balances correctly', async () => {
       const withdrawInput: WithdrawInput = {
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 5000n,
+        accountId: userAccount.id,
+        amount: 5000n,
         currency: 'USD',
         reference: `WTH-${Date.now()}`,
       };
@@ -261,10 +249,8 @@ describe('Transaction Flows (Integration)', () => {
 
     it('should reject withdrawal when insufficient balance', async () => {
       const withdrawInput: WithdrawInput = {
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 50000n, // More than available 20000
+        accountId: userAccount.id,
+        amount: 50000n, // More than available 20000
         currency: 'USD',
         reference: `WTH-${Date.now()}`,
       };
@@ -281,10 +267,8 @@ describe('Transaction Flows (Integration)', () => {
       });
 
       const withdrawInput: WithdrawInput = {
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 50000n,
+        accountId: userAccount.id,
+        amount: 50000n,
         currency: 'USD',
         reference: `WTH-${Date.now()}`,
       };
@@ -307,10 +291,8 @@ describe('Transaction Flows (Integration)', () => {
     beforeEach(async () => {
       // Seed first user with initial balance
       const depositInput: DepositInput = {
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 15000n,
+        accountId: userAccount.id,
+        amount: 15000n,
         currency: 'USD',
         reference: `SEED-${Date.now()}`,
       };
@@ -319,9 +301,7 @@ describe('Transaction Flows (Integration)', () => {
 
     it('should complete transfer between two accounts', async () => {
       const transferInput: TransferInput = {
-        senderLedgerAccountId: userLedgerAccount.id,
         senderAccountId: userAccount.id,
-        receiverLedgerAccountId: secondUserLedgerAccount.id,
         receiverAccountId: secondUserAccount.id,
         amount: 5000n,
         currency: 'USD',
@@ -335,9 +315,7 @@ describe('Transaction Flows (Integration)', () => {
 
     it('should update both sender and receiver balances', async () => {
       const transferInput: TransferInput = {
-        senderLedgerAccountId: userLedgerAccount.id,
         senderAccountId: userAccount.id,
-        receiverLedgerAccountId: secondUserLedgerAccount.id,
         receiverAccountId: secondUserAccount.id,
         amount: 5000n,
         currency: 'USD',
@@ -361,9 +339,7 @@ describe('Transaction Flows (Integration)', () => {
 
     it('should reject transfer when sender has insufficient balance', async () => {
       const transferInput: TransferInput = {
-        senderLedgerAccountId: userLedgerAccount.id,
         senderAccountId: userAccount.id,
-        receiverLedgerAccountId: secondUserLedgerAccount.id,
         receiverAccountId: secondUserAccount.id,
         amount: 50000n, // More than sender has
         currency: 'USD',
@@ -377,9 +353,7 @@ describe('Transaction Flows (Integration)', () => {
 
     it('should not create bank liability balance record', async () => {
       const transferInput: TransferInput = {
-        senderLedgerAccountId: userLedgerAccount.id,
         senderAccountId: userAccount.id,
-        receiverLedgerAccountId: secondUserLedgerAccount.id,
         receiverAccountId: secondUserAccount.id,
         amount: 3000n,
         currency: 'USD',
@@ -399,10 +373,8 @@ describe('Transaction Flows (Integration)', () => {
   describe('Concurrent Transactions', () => {
     it('should handle concurrent deposits to same account', async () => {
       const deposits = Array.from({ length: 5 }, (_, i) => ({
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 1000n,
+        accountId: userAccount.id,
+        amount: 1000n,
         currency: 'USD',
         reference: `DEP-CONCURRENT-${Date.now()}-${i}`,
       }));
@@ -422,20 +394,16 @@ describe('Transaction Flows (Integration)', () => {
     it('should handle concurrent withdrawals safely (prevent overdraft)', async () => {
       // First deposit to have some balance
       await container.transactionService.deposit({
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 5000n,
+        accountId: userAccount.id,
+        amount: 5000n,
         currency: 'USD',
         reference: `SEED-${Date.now()}`,
       });
 
       // Try to withdraw more than available concurrently
       const withdrawals = Array.from({ length: 3 }, (_, i) => ({
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 3000n, // Each tries to withdraw 3000, but only 5000 available
+        accountId: userAccount.id,
+        amount: 3000n, // Each tries to withdraw 3000, but only 5000 available
         currency: 'USD',
         reference: `WTH-CONCURRENT-${Date.now()}-${i}`,
       }));
@@ -463,19 +431,15 @@ describe('Transaction Flows (Integration)', () => {
     it('should handle concurrent transfers without deadlocks', async () => {
       // Seed both users with balance
       await container.transactionService.deposit({
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 10000n,
+        accountId: userAccount.id,
+        amount: 10000n,
         currency: 'USD',
         reference: `SEED1-${Date.now()}`,
       });
 
       await container.transactionService.deposit({
-        userLedgerAccountId: secondUserLedgerAccount.id,
-        userAccountId: secondUserAccount.id,
-        bankLiabilityLedgerAccountId: secondBankLiabilityLedgerAccount.id,
-                amount: 10000n,
+        accountId: secondUserAccount.id,
+        amount: 10000n,
         currency: 'USD',
         reference: `SEED2-${Date.now()}`,
       });
@@ -483,18 +447,14 @@ describe('Transaction Flows (Integration)', () => {
       // Concurrent transfers in both directions
       const transfers = [
         {
-          senderLedgerAccountId: userLedgerAccount.id,
           senderAccountId: userAccount.id,
-          receiverLedgerAccountId: secondUserLedgerAccount.id,
           receiverAccountId: secondUserAccount.id,
           amount: 1000n,
           currency: 'USD',
           reference: `TRF-A-${Date.now()}-1`,
         },
         {
-          senderLedgerAccountId: secondUserLedgerAccount.id,
           senderAccountId: secondUserAccount.id,
-          receiverLedgerAccountId: userLedgerAccount.id,
           receiverAccountId: userAccount.id,
           amount: 1000n,
           currency: 'USD',
@@ -525,27 +485,21 @@ describe('Transaction Flows (Integration)', () => {
     it('should maintain balanced ledger after multiple transactions', async () => {
       // Perform multiple transactions
       await container.transactionService.deposit({
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 10000n,
+        accountId: userAccount.id,
+        amount: 10000n,
         currency: 'USD',
         reference: `INV-DEP-${Date.now()}`,
       });
 
       await container.transactionService.deposit({
-        userLedgerAccountId: secondUserLedgerAccount.id,
-        userAccountId: secondUserAccount.id,
-        bankLiabilityLedgerAccountId: secondBankLiabilityLedgerAccount.id,
-                amount: 5000n,
+        accountId: secondUserAccount.id,
+        amount: 5000n,
         currency: 'USD',
         reference: `INV-DEP2-${Date.now()}`,
       });
 
       await container.transactionService.transfer({
-        senderLedgerAccountId: userLedgerAccount.id,
         senderAccountId: userAccount.id,
-        receiverLedgerAccountId: secondUserLedgerAccount.id,
         receiverAccountId: secondUserAccount.id,
         amount: 3000n,
         currency: 'USD',
@@ -553,28 +507,36 @@ describe('Transaction Flows (Integration)', () => {
       });
 
       await container.transactionService.withdraw({
-        userLedgerAccountId: secondUserLedgerAccount.id,
-        userAccountId: secondUserAccount.id,
-        bankLiabilityLedgerAccountId: secondBankLiabilityLedgerAccount.id,
-                amount: 2000n,
+        accountId: secondUserAccount.id,
+        amount: 2000n,
         currency: 'USD',
         reference: `INV-WTH-${Date.now()}`,
       });
 
-      // Check all ledger lines sum to zero (balanced)
+      // With cumulative accounting, debit/credit are running totals, not per-transaction.
+      // To verify balance, check that each transaction has equal debit and credit amounts.
       const allLines = await dataSource.manager.find(LedgerLineEntity);
-      const totalDebit = allLines.reduce((sum, line) => sum + line.debit, 0n);
-      const totalCredit = allLines.reduce((sum, line) => sum + line.credit, 0n);
 
-      expect(totalDebit).toBe(totalCredit);
+      // Group lines by transaction and verify each transaction is balanced
+      const linesByTx = new Map<string, typeof allLines>();
+      for (const line of allLines) {
+        const existing = linesByTx.get(line.transactionId) || [];
+        existing.push(line);
+        linesByTx.set(line.transactionId, existing);
+      }
+
+      // Each transaction should have balanced amounts (sum of amounts on debit side = credit side)
+      for (const [, lines] of linesByTx) {
+        // In our journal, first line is debit, second is credit, both have same amount
+        expect(lines.length).toBe(2);
+        expect(lines[0].amount).toBe(lines[1].amount);
+      }
     });
 
     it('should maintain non-negative balances', async () => {
       await container.transactionService.deposit({
-        userLedgerAccountId: userLedgerAccount.id,
-        userAccountId: userAccount.id,
-        bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                amount: 5000n,
+        accountId: userAccount.id,
+        amount: 5000n,
         currency: 'USD',
         reference: `BAL-DEP-${Date.now()}`,
       });
@@ -582,10 +544,8 @@ describe('Transaction Flows (Integration)', () => {
       // Try to withdraw more than available
       try {
         await container.transactionService.withdraw({
-          userLedgerAccountId: userLedgerAccount.id,
-          userAccountId: userAccount.id,
-          bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                    amount: 10000n,
+          accountId: userAccount.id,
+          amount: 10000n,
           currency: 'USD',
           reference: `BAL-WTH-${Date.now()}`,
         });
@@ -605,10 +565,8 @@ describe('Transaction Flows (Integration)', () => {
       // Perform multiple deposits to the same account
       for (let i = 0; i < 5; i++) {
         await container.transactionService.deposit({
-          userLedgerAccountId: userLedgerAccount.id,
-          userAccountId: userAccount.id,
-          bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-                    amount: 1000n,
+          accountId: userAccount.id,
+          amount: 1000n,
           currency: 'USD',
           reference: `SEQ-DEP-${Date.now()}-${i}`,
         });

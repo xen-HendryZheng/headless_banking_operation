@@ -23,6 +23,8 @@ describe('LedgerServiceImpl', () => {
     accountId: 'account-1',
     debit,
     credit,
+    amount: debit > 0n ? debit : credit,
+    isDebit: debit > 0n,
   });
 
   // Helper to create persisted ledger line

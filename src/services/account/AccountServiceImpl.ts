@@ -96,4 +96,30 @@ export class AccountServiceImpl implements AccountService {
       await queryRunner.release();
     }
   }
+
+  async getUserBalance(accountId: UUID): Promise<bigint> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+
+    try {
+      const userCashLedgerAccount = await this.ledgerAccountStore.findByAccountIdAndType(
+        accountId,
+        LedgerAccountType.USER_CASH,
+        queryRunner
+      );
+
+      if (!userCashLedgerAccount) {
+        throw new Error('User cash ledger account not found');
+      }
+
+      const balanceRecord = await this.balanceStore.getBalance(
+        userCashLedgerAccount.id,
+        queryRunner
+      );
+
+      return balanceRecord ? balanceRecord.balanceAmount : 0n;
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }

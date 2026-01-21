@@ -101,7 +101,7 @@ export class TypeOrmBalanceStore implements BalanceStore {
     newSequence: number,
     queryRunner: QueryRunner
   ): Promise<BalanceRecord> {
-    const balanceEntity = await queryRunner.manager
+    const result = await queryRunner.manager
       .createQueryBuilder()
       .update(BalanceEntity)
       .set({
@@ -111,10 +111,16 @@ export class TypeOrmBalanceStore implements BalanceStore {
       })
       .where('ledger_account_id = :ledgerAccountId', { ledgerAccountId })
       .returning('*')
-      .execute()
-      .then(result => result.raw[0] as BalanceEntity);
+      .execute();
 
-    return this.mapToBalanceRecord(balanceEntity);
+    // Map raw snake_case result to BalanceRecord
+    const raw = result.raw[0];
+    return {
+      ledgerAccountId: raw.ledger_account_id,
+      balanceAmount: BigInt(raw.balance_amount),
+      lastSequence: raw.last_sequence,
+      updatedAt: raw.updated_at,
+    };
   }
 
   /**

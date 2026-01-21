@@ -5,6 +5,8 @@ module.exports = {
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.spec.ts'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  // Run tests in single process to avoid BigInt serialization issues between workers
+  maxWorkers: 1,
   moduleNameMapper: {
     '^@app/(.*)$': '<rootDir>/src/app/$1',
     '^@domain/(.*)$': '<rootDir>/src/domain/$1',

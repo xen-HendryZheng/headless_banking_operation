@@ -6,25 +6,30 @@ import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
 import { CreateTransactionInput, TransactionStore } from '../../services/transaction/TransactionStore';
 import { InvalidTransactionError, InsufficientBalanceError } from '@domain/common';
-import { TransactionType } from 'stores';
+import { LedgerAccountType, TransactionType } from 'stores';
+import { LedgerAccountStore } from '../../services/account/LedgerAccountStore';
 
 /**
  * Input for withdrawal transaction.
  */
 export interface WithdrawInput {
-  /** User's ledger account ID (withdrawing from) */
-  userLedgerAccountId: UUID;
-  /** User's account ID (denormalized owner reference) */
-  userAccountId: UUID;
-  /** Bank liability ledger account ID (FIRSTCIRCLE_BUSINESS_LIABILITY) */
-  bankLiabilityLedgerAccountId: UUID;
+  /** User's account ID */
+  accountId: UUID;
   /** Amount and currency */
   amount: bigint;
   currency: Currency;
-  /** Optional */
+  /** Optional reference */
   reference?: string;
   /** Optional description */
   description?: string;
+}
+
+/**
+ * Internal resolved ledger accounts for withdrawal.
+ */
+interface ResolvedWithdrawAccounts {
+  userCashLedgerAccountId: UUID;
+  bankLiabilityLedgerAccountId: UUID;
 }
 
 /**
@@ -35,10 +40,14 @@ export interface WithdrawInput {
  *   FIRSTCIRCLE_LIABILITY  CREDIT
  */
 export class WithdrawTransaction extends BaseTransactionCore<WithdrawInput> {
+  private queryRunner!: QueryRunner;
+  private resolvedAccounts!: ResolvedWithdrawAccounts;
+
   constructor(
     private readonly transactionStore: TransactionStore,
     private readonly ledgerService: LedgerService,
     private readonly balanceService: BalanceService,
+    private readonly ledgerAccountStore: LedgerAccountStore,
     private readonly dataSource: DataSource
   ) {
     super();
@@ -49,8 +58,6 @@ export class WithdrawTransaction extends BaseTransactionCore<WithdrawInput> {
     return 'WithdrawTransaction';
   }
 
-  private queryRunner!: QueryRunner;
-
   /**
    * Override execute to manage database transaction lifecycle.
    */
@@ -59,6 +66,9 @@ export class WithdrawTransaction extends BaseTransactionCore<WithdrawInput> {
     await this.queryRunner.startTransaction();
 
     try {
+      // Resolve ledger accounts before executing the transaction
+      this.resolvedAccounts = await this.resolveLedgerAccounts(input.accountId);
+
       const result = await super.execute(input);
       await this.queryRunner.commitTransaction();
       return result;
@@ -70,21 +80,48 @@ export class WithdrawTransaction extends BaseTransactionCore<WithdrawInput> {
     }
   }
 
+  /**
+   * Resolves ledger accounts for the given account ID.
+   */
+  private async resolveLedgerAccounts(accountId: UUID): Promise<ResolvedWithdrawAccounts> {
+    const userCash = await this.ledgerAccountStore.findByAccountIdAndType(
+      accountId,
+      LedgerAccountType.USER_CASH,
+      this.queryRunner
+    );
+    const bankLiability = await this.ledgerAccountStore.findByAccountIdAndType(
+      accountId,
+      LedgerAccountType.FIRSTCIRCLE_BUSINESS_LIABILITY,
+      this.queryRunner
+    );
+
+    if (!userCash) {
+      throw new InvalidTransactionError('User cash ledger account not found');
+    }
+    if (!bankLiability) {
+      throw new InvalidTransactionError('Bank liability ledger account not found');
+    }
+
+    return {
+      userCashLedgerAccountId: userCash.id,
+      bankLiabilityLedgerAccountId: bankLiability.id,
+    };
+  }
+
   async validate(input: WithdrawInput): Promise<void> {
     if (input.amount <= 0n) {
       throw new InvalidTransactionError('Amount must be greater than zero');
     }
 
-    if (!input.userLedgerAccountId || input.userLedgerAccountId.trim().length === 0) {
-      throw new InvalidTransactionError('Invalid user ledger account');
-    }
-
-    if (!input.bankLiabilityLedgerAccountId || input.bankLiabilityLedgerAccountId.trim().length === 0) {
-      throw new InvalidTransactionError('Invalid bank liability ledger account');
+    if (!input.accountId || input.accountId.trim().length === 0) {
+      throw new InvalidTransactionError('Invalid account ID');
     }
 
     // Get the current balance and ensure sufficient funds
-    const currentBalance = await this.balanceService.getBalance(input.userLedgerAccountId, this.queryRunner);
+    const currentBalance = await this.balanceService.getBalance(
+      this.resolvedAccounts.userCashLedgerAccountId,
+      this.queryRunner
+    );
     const availableAmount = currentBalance ? currentBalance.balanceAmount : 0n;
     if (availableAmount < input.amount) {
       throw new InsufficientBalanceError('Insufficient funds for withdrawal');
@@ -93,9 +130,9 @@ export class WithdrawTransaction extends BaseTransactionCore<WithdrawInput> {
 
   protected async createTransactionHeader(input: WithdrawInput): Promise<UUID> {
     const transactionInput: CreateTransactionInput = {
-      accountId: input.userAccountId,
+      accountId: input.accountId,
       type: TransactionType.WITHDRAW,
-      ledgerAccountId: input.userLedgerAccountId,
+      ledgerAccountId: this.resolvedAccounts.userCashLedgerAccountId,
       counterpartyLedgerAccountId: null,
       isCredit: false, // user's perspective - withdrawing funds
       amount: input.amount,
@@ -109,26 +146,29 @@ export class WithdrawTransaction extends BaseTransactionCore<WithdrawInput> {
   }
 
   protected async buildJournal(txId: UUID, input: WithdrawInput): Promise<JournalDraft> {
+    const { userCashLedgerAccountId, bankLiabilityLedgerAccountId } = this.resolvedAccounts;
+
     const [latestBankLiabilityLine, latestUserCashLine] = await Promise.all([
-      this.ledgerService.getLatestLedgerLine(input.bankLiabilityLedgerAccountId, this.queryRunner),
-      this.ledgerService.getLatestLedgerLine(input.userLedgerAccountId, this.queryRunner)
+      this.ledgerService.getLatestLedgerLine(bankLiabilityLedgerAccountId, this.queryRunner),
+      this.ledgerService.getLatestLedgerLine(userCashLedgerAccountId, this.queryRunner)
     ]);
+
     return {
       transactionId: txId,
       type: TransactionType.WITHDRAW,
       currency: input.currency,
       lines: [
         {
-          ledgerAccountId: input.bankLiabilityLedgerAccountId,
-          accountId: input.userAccountId,
+          ledgerAccountId: bankLiabilityLedgerAccountId,
+          accountId: input.accountId,
           debit: latestBankLiabilityLine?.debit ?? 0n,
           credit: (latestBankLiabilityLine?.credit ?? 0n) + input.amount,
           amount: input.amount,
           isDebit: false,
         },
         {
-          ledgerAccountId: input.userLedgerAccountId,
-          accountId: input.userAccountId,
+          ledgerAccountId: userCashLedgerAccountId,
+          accountId: input.accountId,
           debit: (latestUserCashLine?.debit ?? 0n) + input.amount,
           credit: latestUserCashLine?.credit ?? 0n,
           amount: input.amount,

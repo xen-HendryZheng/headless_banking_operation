@@ -6,6 +6,7 @@ import { TxResult, Component } from './BaseTransactionCore';
 import { TransactionStore } from '../../services/transaction/TransactionStore';
 import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
+import { LedgerAccountStore } from '../../services/account/LedgerAccountStore';
 
 /**
  * Transaction service facade.
@@ -17,6 +18,7 @@ export class TransactionService implements Component {
     private readonly transactionStore: TransactionStore,
     private readonly ledgerService: LedgerService,
     private readonly balanceService: BalanceService,
+    private readonly ledgerAccountStore: LedgerAccountStore,
     private readonly dataSource: DataSource
   ) {}
 
@@ -32,6 +34,7 @@ export class TransactionService implements Component {
       this.transactionStore,
       this.ledgerService,
       this.balanceService,
+      this.ledgerAccountStore,
       this.dataSource
     );
     return tx.execute(input);
@@ -45,6 +48,7 @@ export class TransactionService implements Component {
       this.transactionStore,
       this.ledgerService,
       this.balanceService,
+      this.ledgerAccountStore,
       this.dataSource
     );
     return tx.execute(input);
@@ -58,6 +62,7 @@ export class TransactionService implements Component {
       this.transactionStore,
       this.ledgerService,
       this.balanceService,
+      this.ledgerAccountStore,
       this.dataSource
     );
     return tx.execute(input);

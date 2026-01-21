@@ -39,4 +39,9 @@ export interface AccountService {
    * Gets all ledger accounts for a given account.
    */
   getLedgerAccounts(accountId: UUID): Promise<LedgerAccount[]>;
+
+  /**
+   * Get user balance for a given account.
+   */
+  getUserBalance(accountId: UUID): Promise<bigint>;
 }

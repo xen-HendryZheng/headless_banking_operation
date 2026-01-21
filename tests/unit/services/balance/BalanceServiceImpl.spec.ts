@@ -182,14 +182,15 @@ describe('BalanceServiceImpl', () => {
       // No existing balance - returns empty
       mockBalanceStore.lockAndGetMany.mockResolvedValue([]);
 
-      mockBalanceStore.updateBalance.mockResolvedValue(
+      mockBalanceStore.insert.mockResolvedValue(
         createBalanceRecord('new-ledger', 1000n, 1)
       );
 
       const result = await balanceService.apply(deltas, mockQueryRunner);
 
-      // Should treat missing balance as 0
+      // Should treat missing balance as 0 and use insert instead of updateBalance
       expect(mockBalanceRules.assertNoNegative).toHaveBeenCalledWith(0n, 1000n);
+      expect(mockBalanceStore.insert).toHaveBeenCalledWith('new-ledger', 1000n, 1, mockQueryRunner);
       expect(result).toHaveLength(1);
       expect(result[0].balanceAmount).toBe(1000n);
     });

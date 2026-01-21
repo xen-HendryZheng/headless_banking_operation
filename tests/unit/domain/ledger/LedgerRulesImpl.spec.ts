@@ -22,6 +22,8 @@ describe('LedgerRulesImpl', () => {
     accountId: 'account-1',
     debit,
     credit,
+    amount: debit > 0n ? debit : credit,
+    isDebit: debit > 0n,
   });
 
   describe('assertBalanced', () => {
@@ -105,12 +107,14 @@ describe('LedgerRulesImpl', () => {
       expect(() => ledgerRules.assertValidLines(lines)).not.toThrow();
     });
 
-    it('should throw InvalidLedgerLineError when both debit and credit are non-zero', () => {
+    it('should not throw when both debit and credit are non-zero (cumulative tracking)', () => {
+      // With cumulative accounting, both debit and credit can be positive
+      // This represents the running total of all debits and credits
       const lines: LedgerLineDraft[] = [
-        createLine(1000n, 500n, 'ledger-1'), // Invalid: both non-zero
+        { ledgerAccountId: 'ledger-1', accountId: 'account-1', debit: 1000n, credit: 500n, amount: 500n, isDebit: true },
       ];
 
-      expect(() => ledgerRules.assertValidLines(lines)).toThrow(InvalidLedgerLineError);
+      expect(() => ledgerRules.assertValidLines(lines)).not.toThrow();
     });
 
     it('should throw InvalidLedgerLineError when both debit and credit are zero', () => {
@@ -141,10 +145,10 @@ describe('LedgerRulesImpl', () => {
       expect(() => ledgerRules.assertValidLines([])).not.toThrow();
     });
 
-    it('should detect invalid line among valid lines', () => {
+    it('should detect invalid line (both zero) among valid lines', () => {
       const lines: LedgerLineDraft[] = [
         createLine(1000n, 0n, 'ledger-1'), // Valid
-        createLine(500n, 500n, 'ledger-2'), // Invalid
+        createLine(0n, 0n, 'ledger-2'), // Invalid: both zero
         createLine(0n, 1000n, 'ledger-3'), // Valid
       ];
 

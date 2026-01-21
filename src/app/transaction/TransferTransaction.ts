@@ -6,27 +6,32 @@ import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
 import { CreateTransactionInput, TransactionStore } from '../../services/transaction/TransactionStore';
 import { InvalidTransactionError, InsufficientBalanceError } from '@domain/common';
-import { TransactionType } from 'stores/entities/enums';
+import { LedgerAccountType, TransactionType } from 'stores/entities/enums';
+import { LedgerAccountStore } from '../../services/account/LedgerAccountStore';
 
 /**
  * Input for transfer transaction.
  */
 export interface TransferInput {
-  /** Sender's ledger account ID */
-  senderLedgerAccountId: UUID;
-  /** Sender's account ID (denormalized owner reference) */
+  /** Sender's account ID */
   senderAccountId: UUID;
-  /** Receiver's ledger account ID */
-  receiverLedgerAccountId: UUID;
-  /** Receiver's account ID (denormalized owner reference) */
+  /** Receiver's account ID */
   receiverAccountId: UUID;
   /** Amount and currency */
   amount: bigint;
   currency: Currency;
-  /** Optional */
+  /** Optional reference */
   reference?: string;
   /** Optional description */
   description?: string;
+}
+
+/**
+ * Internal resolved ledger accounts for transfer.
+ */
+interface ResolvedTransferAccounts {
+  senderLedgerAccountId: UUID;
+  receiverLedgerAccountId: UUID;
 }
 
 /**
@@ -39,10 +44,14 @@ export interface TransferInput {
  * Note: Bank liability is NOT touched for internal transfers.
  */
 export class TransferTransaction extends BaseTransactionCore<TransferInput> {
+  private queryRunner!: QueryRunner;
+  private resolvedAccounts!: ResolvedTransferAccounts;
+
   constructor(
     private readonly transactionStore: TransactionStore,
     private readonly ledgerService: LedgerService,
     private readonly balanceService: BalanceService,
+    private readonly ledgerAccountStore: LedgerAccountStore,
     private readonly dataSource: DataSource
   ) {
     super();
@@ -53,8 +62,6 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
     return 'TransferTransaction';
   }
 
-  private queryRunner!: QueryRunner;
-
   /**
    * Override execute to manage database transaction lifecycle.
    */
@@ -63,6 +70,9 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
     await this.queryRunner.startTransaction();
 
     try {
+      // Resolve ledger accounts before executing the transaction
+      this.resolvedAccounts = await this.resolveLedgerAccounts(input);
+
       const result = await super.execute(input);
       await this.queryRunner.commitTransaction();
       return result;
@@ -74,25 +84,54 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
     }
   }
 
+  /**
+   * Resolves ledger accounts for both sender and receiver.
+   */
+  private async resolveLedgerAccounts(input: TransferInput): Promise<ResolvedTransferAccounts> {
+    const senderCash = await this.ledgerAccountStore.findByAccountIdAndType(
+      input.senderAccountId,
+      LedgerAccountType.USER_CASH,
+      this.queryRunner
+    );
+    const receiverCash = await this.ledgerAccountStore.findByAccountIdAndType(
+      input.receiverAccountId,
+      LedgerAccountType.USER_CASH,
+      this.queryRunner
+    );
+
+    if (!senderCash) {
+      throw new InvalidTransactionError('Sender ledger account not found');
+    }
+    if (!receiverCash) {
+      throw new InvalidTransactionError('Receiver ledger account not found');
+    }
+
+    return {
+      senderLedgerAccountId: senderCash.id,
+      receiverLedgerAccountId: receiverCash.id,
+    };
+  }
+
   async validate(input: TransferInput): Promise<void> {
     if (input.amount <= 0n) {
-      throw new Error('Amount must be greater than zero');
+      throw new InvalidTransactionError('Amount must be greater than zero');
     }
 
-    if (!input.senderLedgerAccountId || input.senderLedgerAccountId.trim().length === 0) {
-      throw new InvalidTransactionError('Invalid sender ledger account');
+    if (!input.senderAccountId || input.senderAccountId.trim().length === 0) {
+      throw new InvalidTransactionError('Invalid sender account');
     }
 
-    if (!input.receiverLedgerAccountId || input.receiverLedgerAccountId.trim().length === 0) {
-      throw new InvalidTransactionError('Invalid receiver ledger account');
+    if (!input.receiverAccountId || input.receiverAccountId.trim().length === 0) {
+      throw new InvalidTransactionError('Invalid receiver account');
     }
 
     // Lock BOTH accounts in sorted order upfront to prevent deadlocks
-    const sortedIds = [input.senderLedgerAccountId, input.receiverLedgerAccountId].sort();
+    const { senderLedgerAccountId, receiverLedgerAccountId } = this.resolvedAccounts;
+    const sortedIds = [senderLedgerAccountId, receiverLedgerAccountId].sort();
     const balances = await this.balanceService.getBalances(sortedIds, this.queryRunner);
 
     // Find sender's balance from the locked balances
-    const senderBalance = balances.find(b => b.ledgerAccountId === input.senderLedgerAccountId);
+    const senderBalance = balances.find(b => b.ledgerAccountId === senderLedgerAccountId);
     const availableAmount = senderBalance?.balanceAmount ?? 0n;
     if (availableAmount < input.amount) {
       throw new InsufficientBalanceError('Insufficient funds for transfer');
@@ -103,8 +142,8 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
     const transactionInput: CreateTransactionInput = {
       accountId: input.senderAccountId,
       type: TransactionType.WITHDRAW,
-      ledgerAccountId: input.senderLedgerAccountId,
-      counterpartyLedgerAccountId: input.receiverLedgerAccountId,
+      ledgerAccountId: this.resolvedAccounts.senderLedgerAccountId,
+      counterpartyLedgerAccountId: this.resolvedAccounts.receiverLedgerAccountId,
       isCredit: false, // user's perspective - withdrawing funds
       amount: input.amount,
       currency: input.currency,
@@ -117,17 +156,20 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
   }
 
   protected async buildJournal(txId: UUID, input: TransferInput): Promise<JournalDraft> {
+    const { senderLedgerAccountId, receiverLedgerAccountId } = this.resolvedAccounts;
+
     const [latestSenderLine, latestReceiverLine] = await Promise.all([
-      this.ledgerService.getLatestLedgerLine(input.senderLedgerAccountId, this.queryRunner),
-      this.ledgerService.getLatestLedgerLine(input.receiverLedgerAccountId, this.queryRunner)
+      this.ledgerService.getLatestLedgerLine(senderLedgerAccountId, this.queryRunner),
+      this.ledgerService.getLatestLedgerLine(receiverLedgerAccountId, this.queryRunner)
     ]);
+
     return {
       transactionId: txId,
       type: TransactionType.TRANSFER,
       currency: input.currency,
       lines: [
         {
-          ledgerAccountId: input.senderLedgerAccountId,
+          ledgerAccountId: senderLedgerAccountId,
           accountId: input.senderAccountId,
           debit: (latestSenderLine?.debit ?? 0n) + input.amount,
           credit: latestSenderLine?.credit ?? 0n,
@@ -135,7 +177,7 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
           isDebit: true,
         },
         {
-          ledgerAccountId: input.receiverLedgerAccountId,
+          ledgerAccountId: receiverLedgerAccountId,
           accountId: input.receiverAccountId,
           debit: latestReceiverLine?.debit ?? 0n,
           credit: (latestReceiverLine?.credit ?? 0n) + input.amount,

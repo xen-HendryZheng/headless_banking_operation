@@ -50,7 +50,7 @@ export interface LedgerAccountStore {
    */
   findByAccountIdAndType(
     accountId: UUID,
-    type: 'USER_CASH' | 'FIRSTCIRCLE_BUSINESS_LIABILITY',
+    type: LedgerAccountType,
     queryRunner: QueryRunner
   ): Promise<LedgerAccount | null>;
 }

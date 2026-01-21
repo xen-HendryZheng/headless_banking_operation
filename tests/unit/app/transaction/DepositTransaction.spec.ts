@@ -3,22 +3,27 @@ import { DepositTransaction, DepositInput } from '../../../../src/app/transactio
 import { TransactionStore, TransactionHeader } from '../../../../src/services/transaction/TransactionStore';
 import { LedgerService } from '../../../../src/services/ledger/LedgerService';
 import { BalanceService, BalanceRecord } from '../../../../src/services/balance/BalanceService';
+import { LedgerAccountStore, LedgerAccount } from '../../../../src/services/account/LedgerAccountStore';
 import { LedgerLine } from '../../../../src/domain/ledger/LedgerTypes';
 import { InvalidTransactionError } from '../../../../src/domain/common/DomainErrors';
+import { LedgerAccountType } from '../../../../src/stores/entities/enums';
 
 describe('DepositTransaction', () => {
   let depositTransaction: DepositTransaction;
   let mockTransactionStore: jest.Mocked<TransactionStore>;
   let mockLedgerService: jest.Mocked<LedgerService>;
   let mockBalanceService: jest.Mocked<BalanceService>;
+  let mockLedgerAccountStore: jest.Mocked<LedgerAccountStore>;
   let mockDataSource: jest.Mocked<DataSource>;
   let mockQueryRunner: jest.Mocked<QueryRunner>;
 
+  // Resolved ledger account IDs (mocked)
+  const userLedgerAccountId = 'user-ledger-123';
+  const bankLiabilityLedgerAccountId = 'bank-liability-ledger';
+
   // Valid deposit input for testing
   const validInput: DepositInput = {
-    userLedgerAccountId: 'user-ledger-123',
-    userAccountId: 'user-account-123',
-    bankLiabilityLedgerAccountId: 'bank-liability-ledger',
+    accountId: 'user-account-123',
     amount: 10000n,
     currency: 'USD',
     reference: 'DEP-001',
@@ -43,6 +48,17 @@ describe('DepositTransaction', () => {
     createdAt: new Date(),
   });
 
+  // Helper to create ledger account
+  const createLedgerAccount = (id: string, type: LedgerAccountType): LedgerAccount => ({
+    id,
+    accountId: validInput.accountId,
+    currency: 'USD',
+    type,
+    status: 'ACTIVE',
+    metadata: null,
+    createdAt: new Date(),
+  });
+
   beforeEach(() => {
     mockTransactionStore = {
       createHeader: jest.fn(),
@@ -59,6 +75,21 @@ describe('DepositTransaction', () => {
       apply: jest.fn(),
       getBalance: jest.fn(),
       getBalances: jest.fn(),
+    };
+
+    mockLedgerAccountStore = {
+      create: jest.fn(),
+      findById: jest.fn(),
+      findByAccountId: jest.fn(),
+      findByAccountIdAndType: jest.fn().mockImplementation((accountId, type) => {
+        if (type === LedgerAccountType.USER_CASH) {
+          return Promise.resolve(createLedgerAccount(userLedgerAccountId, LedgerAccountType.USER_CASH));
+        }
+        if (type === LedgerAccountType.FIRSTCIRCLE_BUSINESS_LIABILITY) {
+          return Promise.resolve(createLedgerAccount(bankLiabilityLedgerAccountId, LedgerAccountType.FIRSTCIRCLE_BUSINESS_LIABILITY));
+        }
+        return Promise.resolve(null);
+      }),
     };
 
     mockQueryRunner = {
@@ -78,6 +109,7 @@ describe('DepositTransaction', () => {
       mockTransactionStore,
       mockLedgerService,
       mockBalanceService,
+      mockLedgerAccountStore,
       mockDataSource
     );
   });
@@ -106,152 +138,11 @@ describe('DepositTransaction', () => {
     });
   });
 
-  describe('buildTransactionInput (protected method test via execute)', () => {
-    it('should build CreateTransactionInput with DEPOSIT type', async () => {
-      // Setup mocks for full flow
-      const txHeader: TransactionHeader = {
-        id: 'tx-123',
-        ledgerAccountId: validInput.userLedgerAccountId,
-        counterpartyLedgerAccountId: null,
-        type: 'DEPOSIT',
-        currency: 'USD',
-        isCredit: true,
-        amount: validInput.amount,
-        reference: validInput.reference || '',
-        description: validInput.description || null,
-        status: 'PENDING',
-        accountId: validInput.userAccountId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockTransactionStore.createHeader.mockResolvedValue(txHeader);
-      mockLedgerService.post.mockResolvedValue([
-        createLedgerLine(validInput.bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(validInput.userLedgerAccountId, 0n, validInput.amount, 1),
-      ]);
-      mockBalanceService.apply.mockResolvedValue([]);
-
-      await depositTransaction.execute(validInput);
-
-      expect(mockTransactionStore.createHeader).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'DEPOSIT',
-          ledgerAccountId: validInput.userLedgerAccountId,
-          isCredit: true,
-          counterpartyLedgerAccountId: null,
-        }),
-        mockQueryRunner
-      );
-    });
-  });
-
-  describe('buildJournal (via execute flow)', () => {
-    it('should create journal with bank liability debit and user credit', async () => {
-      const txHeader: TransactionHeader = {
-        id: 'tx-123',
-        ledgerAccountId: validInput.userLedgerAccountId,
-        counterpartyLedgerAccountId: null,
-        type: 'DEPOSIT',
-        currency: 'USD',
-        isCredit: true,
-        amount: validInput.amount,
-        reference: validInput.reference || '',
-        description: validInput.description || null,
-        status: 'POSTED',
-        accountId: validInput.userAccountId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockTransactionStore.createHeader.mockResolvedValue(txHeader);
-      mockLedgerService.post.mockResolvedValue([
-        createLedgerLine(validInput.bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(validInput.userLedgerAccountId, 0n, validInput.amount, 1),
-      ]);
-      mockBalanceService.apply.mockResolvedValue([]);
-
-      await depositTransaction.execute(validInput);
-
-      // Verify ledgerService.post was called with correct journal structure
-      expect(mockLedgerService.post).toHaveBeenCalledWith(
-        expect.objectContaining({
-          transactionId: 'tx-123',
-          type: 'DEPOSIT',
-          currency: 'USD',
-          lines: expect.arrayContaining([
-            // Bank liability gets DEBITED
-            expect.objectContaining({
-              ledgerAccountId: validInput.bankLiabilityLedgerAccountId,
-              debit: validInput.amount,
-              credit: 0n,
-            }),
-            // User account gets CREDITED
-            expect.objectContaining({
-              ledgerAccountId: validInput.userLedgerAccountId,
-              debit: 0n,
-              credit: validInput.amount,
-            }),
-          ]),
-        }),
-        mockQueryRunner
-      );
-    });
-  });
-
-  describe('computeBalanceDeltas', () => {
-    it('should compute positive delta for credit line and negative for debit line', async () => {
-      const txHeader: TransactionHeader = {
-        id: 'tx-123',
-        ledgerAccountId: validInput.userLedgerAccountId,
-        counterpartyLedgerAccountId: null,
-        type: 'DEPOSIT',
-        currency: 'USD',
-        isCredit: true,
-        amount: validInput.amount,
-        reference: validInput.reference || '',
-        description: validInput.description || null,
-        status: 'POSTED',
-        accountId: validInput.userAccountId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const ledgerLines: LedgerLine[] = [
-        createLedgerLine(validInput.bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(validInput.userLedgerAccountId, 0n, validInput.amount, 1),
-      ];
-
-      mockTransactionStore.createHeader.mockResolvedValue(txHeader);
-      mockLedgerService.post.mockResolvedValue(ledgerLines);
-      mockBalanceService.apply.mockResolvedValue([]);
-
-      await depositTransaction.execute(validInput);
-
-      // Verify balance deltas
-      expect(mockBalanceService.apply).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          // Bank liability: negative delta (debit)
-          expect.objectContaining({
-            ledgerAccountId: validInput.bankLiabilityLedgerAccountId,
-            delta: -validInput.amount, // credit - debit = 0 - amount = negative
-          }),
-          // User: positive delta (credit)
-          expect.objectContaining({
-            ledgerAccountId: validInput.userLedgerAccountId,
-            delta: validInput.amount, // credit - debit = amount - 0 = positive
-          }),
-        ]),
-        mockQueryRunner
-      );
-    });
-  });
-
   describe('execute', () => {
-    it('should complete full deposit flow', async () => {
+    it('should resolve ledger accounts and complete full deposit flow', async () => {
       const txHeader: TransactionHeader = {
         id: 'tx-123',
-        ledgerAccountId: validInput.userLedgerAccountId,
+        ledgerAccountId: userLedgerAccountId,
         counterpartyLedgerAccountId: null,
         type: 'DEPOSIT',
         currency: 'USD',
@@ -260,19 +151,18 @@ describe('DepositTransaction', () => {
         reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
-        accountId: validInput.userAccountId,
+        accountId: validInput.accountId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
       const ledgerLines: LedgerLine[] = [
-        createLedgerLine(validInput.bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(validInput.userLedgerAccountId, 0n, validInput.amount, 1),
+        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
+        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1),
       ];
 
       const balanceRecords: BalanceRecord[] = [
-        { ledgerAccountId: validInput.bankLiabilityLedgerAccountId, balanceAmount: -10000n, lastSequence: 1, updatedAt: new Date() },
-        { ledgerAccountId: validInput.userLedgerAccountId, balanceAmount: 10000n, lastSequence: 1, updatedAt: new Date() },
+        { ledgerAccountId: userLedgerAccountId, balanceAmount: 10000n, lastSequence: 1, updatedAt: new Date() },
       ];
 
       mockTransactionStore.createHeader.mockResolvedValue(txHeader);
@@ -280,6 +170,18 @@ describe('DepositTransaction', () => {
       mockBalanceService.apply.mockResolvedValue(balanceRecords);
 
       const result = await depositTransaction.execute(validInput);
+
+      // Verify ledger accounts were resolved
+      expect(mockLedgerAccountStore.findByAccountIdAndType).toHaveBeenCalledWith(
+        validInput.accountId,
+        LedgerAccountType.USER_CASH,
+        mockQueryRunner
+      );
+      expect(mockLedgerAccountStore.findByAccountIdAndType).toHaveBeenCalledWith(
+        validInput.accountId,
+        LedgerAccountType.FIRSTCIRCLE_BUSINESS_LIABILITY,
+        mockQueryRunner
+      );
 
       // Verify transaction flow - each step is called
       expect(mockTransactionStore.createHeader).toHaveBeenCalled();
@@ -290,10 +192,16 @@ describe('DepositTransaction', () => {
       expect(result.transactionId).toBe('tx-123');
     });
 
-    it('should propagate error on ledger post failure', async () => {
+    it('should throw error when user cash ledger account not found', async () => {
+      mockLedgerAccountStore.findByAccountIdAndType.mockResolvedValue(null);
+
+      await expect(depositTransaction.execute(validInput)).rejects.toThrow(InvalidTransactionError);
+    });
+
+    it('should create transaction header with resolved ledger account', async () => {
       const txHeader: TransactionHeader = {
         id: 'tx-123',
-        ledgerAccountId: validInput.userLedgerAccountId,
+        ledgerAccountId: userLedgerAccountId,
         counterpartyLedgerAccountId: null,
         type: 'DEPOSIT',
         currency: 'USD',
@@ -302,7 +210,131 @@ describe('DepositTransaction', () => {
         reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
-        accountId: validInput.userAccountId,
+        accountId: validInput.accountId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockTransactionStore.createHeader.mockResolvedValue(txHeader);
+      mockLedgerService.post.mockResolvedValue([
+        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
+        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1),
+      ]);
+      mockBalanceService.apply.mockResolvedValue([]);
+
+      await depositTransaction.execute(validInput);
+
+      expect(mockTransactionStore.createHeader).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'DEPOSIT',
+          ledgerAccountId: userLedgerAccountId,
+          isCredit: true,
+          counterpartyLedgerAccountId: null,
+        }),
+        mockQueryRunner
+      );
+    });
+
+    it('should build journal with resolved ledger accounts', async () => {
+      const txHeader: TransactionHeader = {
+        id: 'tx-123',
+        ledgerAccountId: userLedgerAccountId,
+        counterpartyLedgerAccountId: null,
+        type: 'DEPOSIT',
+        currency: 'USD',
+        isCredit: true,
+        amount: validInput.amount,
+        reference: validInput.reference || '',
+        description: validInput.description || null,
+        status: 'POSTED',
+        accountId: validInput.accountId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockTransactionStore.createHeader.mockResolvedValue(txHeader);
+      mockLedgerService.post.mockResolvedValue([
+        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
+        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1),
+      ]);
+      mockBalanceService.apply.mockResolvedValue([]);
+
+      await depositTransaction.execute(validInput);
+
+      expect(mockLedgerService.post).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transactionId: 'tx-123',
+          type: 'DEPOSIT',
+          currency: 'USD',
+          lines: expect.arrayContaining([
+            expect.objectContaining({
+              ledgerAccountId: bankLiabilityLedgerAccountId,
+              debit: validInput.amount,
+              credit: 0n,
+            }),
+            expect.objectContaining({
+              ledgerAccountId: userLedgerAccountId,
+              debit: 0n,
+              credit: validInput.amount,
+            }),
+          ]),
+        }),
+        mockQueryRunner
+      );
+    });
+
+    it('should update only user balance (not bank liability)', async () => {
+      const txHeader: TransactionHeader = {
+        id: 'tx-123',
+        ledgerAccountId: userLedgerAccountId,
+        counterpartyLedgerAccountId: null,
+        type: 'DEPOSIT',
+        currency: 'USD',
+        isCredit: true,
+        amount: validInput.amount,
+        reference: validInput.reference || '',
+        description: validInput.description || null,
+        status: 'POSTED',
+        accountId: validInput.accountId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const ledgerLines: LedgerLine[] = [
+        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
+        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1),
+      ];
+
+      mockTransactionStore.createHeader.mockResolvedValue(txHeader);
+      mockLedgerService.post.mockResolvedValue(ledgerLines);
+      mockBalanceService.apply.mockResolvedValue([]);
+
+      await depositTransaction.execute(validInput);
+
+      expect(mockBalanceService.apply).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            ledgerAccountId: userLedgerAccountId,
+            delta: validInput.amount,
+          }),
+        ],
+        mockQueryRunner
+      );
+    });
+
+    it('should propagate error on ledger post failure', async () => {
+      const txHeader: TransactionHeader = {
+        id: 'tx-123',
+        ledgerAccountId: userLedgerAccountId,
+        counterpartyLedgerAccountId: null,
+        type: 'DEPOSIT',
+        currency: 'USD',
+        isCredit: true,
+        amount: validInput.amount,
+        reference: validInput.reference || '',
+        description: validInput.description || null,
+        status: 'POSTED',
+        accountId: validInput.accountId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -311,35 +343,6 @@ describe('DepositTransaction', () => {
       mockLedgerService.post.mockRejectedValue(new Error('Ledger post failed'));
 
       await expect(depositTransaction.execute(validInput)).rejects.toThrow('Ledger post failed');
-    });
-
-    it('should propagate error on balance apply failure', async () => {
-      const txHeader: TransactionHeader = {
-        id: 'tx-123',
-        ledgerAccountId: validInput.userLedgerAccountId,
-        counterpartyLedgerAccountId: null,
-        type: 'DEPOSIT',
-        currency: 'USD',
-        isCredit: true,
-        amount: validInput.amount,
-        reference: validInput.reference || '',
-        description: validInput.description || null,
-        status: 'POSTED',
-        accountId: validInput.userAccountId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const ledgerLines: LedgerLine[] = [
-        createLedgerLine(validInput.bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(validInput.userLedgerAccountId, 0n, validInput.amount, 1),
-      ];
-
-      mockTransactionStore.createHeader.mockResolvedValue(txHeader);
-      mockLedgerService.post.mockResolvedValue(ledgerLines);
-      mockBalanceService.apply.mockRejectedValue(new Error('Balance apply failed'));
-
-      await expect(depositTransaction.execute(validInput)).rejects.toThrow('Balance apply failed');
     });
   });
 });

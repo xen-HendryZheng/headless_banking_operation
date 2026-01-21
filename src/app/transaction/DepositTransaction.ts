@@ -6,25 +6,30 @@ import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
 import { CreateTransactionInput, TransactionStore } from '../../services/transaction/TransactionStore';
 import { InvalidTransactionError } from '../../domain/common/DomainErrors';
-import { TransactionType } from 'stores';
+import { LedgerAccountType, TransactionType } from 'stores';
+import { LedgerAccountStore } from '../../services/account/LedgerAccountStore';
 
 /**
  * Input for deposit transaction.
  */
 export interface DepositInput {
-  /** User's ledger account ID (receiving the deposit) */
-  userLedgerAccountId: UUID;
-  /** User's account ID (denormalized owner reference) */
-  userAccountId: UUID;
-  /** Bank liability ledger account ID (FIRSTCIRCLE_BUSINESS_LIABILITY) */
-  bankLiabilityLedgerAccountId: UUID;
+  /** User's account ID */
+  accountId: UUID;
   /** Amount and currency */
   amount: bigint;
   currency: Currency;
-  /** Optional */
+  /** Optional reference */
   reference?: string;
   /** Optional description */
   description?: string;
+}
+
+/**
+ * Internal resolved ledger accounts for deposit.
+ */
+interface ResolvedDepositAccounts {
+  userCashLedgerAccountId: UUID;
+  bankLiabilityLedgerAccountId: UUID;
 }
 
 /**
@@ -35,10 +40,14 @@ export interface DepositInput {
  *   USER_CASH              CREDIT
  */
 export class DepositTransaction extends BaseTransactionCore<DepositInput> {
+  private queryRunner!: QueryRunner;
+  private resolvedAccounts!: ResolvedDepositAccounts;
+
   constructor(
     private readonly transactionStore: TransactionStore,
     private readonly ledgerService: LedgerService,
     private readonly balanceService: BalanceService,
+    private readonly ledgerAccountStore: LedgerAccountStore,
     private readonly dataSource: DataSource
   ) {
     super();
@@ -49,16 +58,17 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
     return 'DepositTransaction';
   }
 
-  private queryRunner!: QueryRunner;
   /**
    * Override execute to manage database transaction lifecycle.
    */
   async execute(input: DepositInput): Promise<TxResult> {
-    
     await this.queryRunner.connect();
     await this.queryRunner.startTransaction();
 
     try {
+      // Resolve ledger accounts before executing the transaction
+      this.resolvedAccounts = await this.resolveLedgerAccounts(input.accountId);
+
       const result = await super.execute(input);
       await this.queryRunner.commitTransaction();
       return result;
@@ -70,17 +80,41 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
     }
   }
 
+  /**
+   * Resolves ledger accounts for the given account ID.
+   */
+  private async resolveLedgerAccounts(accountId: UUID): Promise<ResolvedDepositAccounts> {
+    const userCash = await this.ledgerAccountStore.findByAccountIdAndType(
+      accountId,
+      LedgerAccountType.USER_CASH,
+      this.queryRunner
+    );
+    const bankLiability = await this.ledgerAccountStore.findByAccountIdAndType(
+      accountId,
+      LedgerAccountType.FIRSTCIRCLE_BUSINESS_LIABILITY,
+      this.queryRunner
+    );
+
+    if (!userCash) {
+      throw new InvalidTransactionError('User cash ledger account not found');
+    }
+    if (!bankLiability) {
+      throw new InvalidTransactionError('Bank liability ledger account not found');
+    }
+
+    return {
+      userCashLedgerAccountId: userCash.id,
+      bankLiabilityLedgerAccountId: bankLiability.id,
+    };
+  }
+
   validate(input: DepositInput): Promise<void> {
     if (input.amount <= 0n) {
       throw new InvalidTransactionError('Amount must be greater than zero');
     }
 
-    if (!input.userLedgerAccountId || input.userLedgerAccountId.trim().length === 0) {
-      throw new InvalidTransactionError('Invalid user ledger account');
-    }
-
-    if (!input.bankLiabilityLedgerAccountId || input.bankLiabilityLedgerAccountId.trim().length === 0) {
-      throw new InvalidTransactionError('Invalid bank liability ledger account');
+    if (!input.accountId || input.accountId.trim().length === 0) {
+      throw new InvalidTransactionError('Invalid account ID');
     }
 
     return Promise.resolve();
@@ -88,9 +122,9 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
 
   protected async createTransactionHeader(input: DepositInput): Promise<UUID> {
     const transactionInput: CreateTransactionInput = {
-      accountId: input.userAccountId,
+      accountId: input.accountId,
       type: TransactionType.DEPOSIT,
-      ledgerAccountId: input.userLedgerAccountId,
+      ledgerAccountId: this.resolvedAccounts.userCashLedgerAccountId,
       counterpartyLedgerAccountId: null,
       isCredit: true, // user's perspective - receiving funds
       amount: input.amount,
@@ -104,26 +138,29 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
   }
 
   protected async buildJournal(txId: UUID, input: DepositInput): Promise<JournalDraft> {
+    const { userCashLedgerAccountId, bankLiabilityLedgerAccountId } = this.resolvedAccounts;
+
     const [latestBankLiabilityLine, latestUserCashLine] = await Promise.all([
-      this.ledgerService.getLatestLedgerLine(input.bankLiabilityLedgerAccountId, this.queryRunner),
-      this.ledgerService.getLatestLedgerLine(input.userLedgerAccountId, this.queryRunner)
+      this.ledgerService.getLatestLedgerLine(bankLiabilityLedgerAccountId, this.queryRunner),
+      this.ledgerService.getLatestLedgerLine(userCashLedgerAccountId, this.queryRunner)
     ]);
+
     return {
       transactionId: txId,
       type: TransactionType.DEPOSIT,
       currency: input.currency,
       lines: [
         {
-          ledgerAccountId: input.bankLiabilityLedgerAccountId,
-          accountId: input.userAccountId,
+          ledgerAccountId: bankLiabilityLedgerAccountId,
+          accountId: input.accountId,
           debit: (latestBankLiabilityLine?.debit ?? 0n) + input.amount,
           credit: latestBankLiabilityLine?.credit ?? 0n,
           amount: input.amount,
           isDebit: true,
         },
         {
-          ledgerAccountId: input.userLedgerAccountId,
-          accountId: input.userAccountId,
+          ledgerAccountId: userCashLedgerAccountId,
+          accountId: input.accountId,
           debit: latestUserCashLine?.debit ?? 0n,
           credit: (latestUserCashLine?.credit ?? 0n) + input.amount,
           amount: input.amount,

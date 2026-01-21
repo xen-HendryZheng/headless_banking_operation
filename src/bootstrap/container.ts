@@ -55,6 +55,7 @@ export async function createContainer(dataSource: DataSource): Promise<Container
     transactionStore,
     ledgerService,
     balanceService,
+    ledgerAccountStore,
     dataSource
   );
 

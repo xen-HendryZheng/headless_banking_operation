@@ -49,7 +49,7 @@ export class TypeOrmLedgerAccountStore implements LedgerAccountStore {
 
   async findByAccountIdAndType(
     accountId: UUID,
-    type: 'USER_CASH' | 'FIRSTCIRCLE_BUSINESS_LIABILITY',
+    type: LedgerAccountType,
     queryRunner: QueryRunner
   ): Promise<LedgerAccount | null> {
     const ledgerAccountEntity = await queryRunner.manager
