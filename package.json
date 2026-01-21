@@ -1,0 +1,37 @@
+{
+  "name": "ledger-core",
+  "version": "1.0.0",
+  "description": "Headless banking ledger service",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "migration:generate": "npm run typeorm -- migration:generate -d src/stores/data-source.ts",
+    "migration:run": "npm run typeorm -- migration:run -d src/stores/data-source.ts",
+    "migration:revert": "npm run typeorm -- migration:revert -d src/stores/data-source.ts",
+    "migration:schema:sync": "npm run typeorm -- schema:sync -d src/stores/data-source.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathPattern=tests/unit",
+    "test:integration": "jest --testPathPattern=tests/integration"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.1",
+    "pg": "^8.11.3",
+    "reflect-metadata": "^0.2.1",
+    "typeorm": "^0.3.20",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.11.5",
+    "@types/uuid": "^9.0.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

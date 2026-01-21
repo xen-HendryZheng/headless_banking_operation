@@ -1,0 +1,46 @@
+Scaffolding Complete
+Configuration Files (6)
+package.json - Dependencies and npm scripts
+tsconfig.json - TypeScript config with decorators and path aliases
+docker-compose.yml - PostgreSQL 16 container
+.env.example - Environment variable template
+.gitignore - Standard ignores
+jest.config.js - Jest with ts-jest and path aliases
+Source Files (47)
+Domain Layer (9 files)
+
+src/domain/common/ - Types, Money, DomainErrors
+src/domain/ledger/ - LedgerTypes, Journal, LedgerRules, LedgerRulesImpl
+src/domain/balance/ - BalanceRules, BalanceRulesImpl
+Services Layer (9 files)
+
+src/services/transaction/ - TransactionStore, TransactionStatus
+src/services/ledger/ - LedgerService, LedgerServiceImpl, Sequencer, LedgerLineStore
+src/services/balance/ - BalanceService, BalanceServiceImpl, BalanceStore
+Infrastructure Layer (12 files)
+
+src/infrastructure/entities/ - 5 TypeORM entities + enums
+src/infrastructure/transformers/ - BigIntTransformer
+src/infrastructure/*/ - TypeORM adapters
+src/infrastructure/data-source.ts - DataSource config
+Application Layer (5 files)
+
+src/app/transaction/ - BaseTransactionCore, TransactionService, Deposit/Withdraw/Transfer
+Bootstrap (2 files)
+
+src/bootstrap/container.ts - Dependency wiring
+src/index.ts - Entry point
+Barrel Exports (10 files)
+
+index.ts in each directory
+Test Files (15)
+tests/unit/domain/ - Money, Journal, LedgerRulesImpl, BalanceRulesImpl
+tests/unit/services/ - LedgerServiceImpl, BalanceServiceImpl
+tests/unit/app/ - Deposit, Withdraw, Transfer transactions
+tests/integration/ - TypeORM stores + TransactionFlows
+Next Steps
+Run npm install
+Run docker-compose up -d
+Generate migration: npm run migration:generate src/infrastructure/migrations/InitialSchema
+Run migration: npm run migration:run
+Implement the TODO stubs in each file

@@ -1,0 +1,61 @@
+import { QueryRunner } from 'typeorm';
+import { LedgerLineStore, LedgerLineInsert } from '../../services/ledger/LedgerLineStore';
+import { LedgerLine } from '../../domain/ledger/LedgerTypes';
+import { UUID } from '../../domain/common/Types';
+import { LedgerLineEntity } from '../entities/LedgerLineEntity';
+
+/**
+ * TypeORM implementation of LedgerLineStore.
+ */
+export class TypeOrmLedgerLineStore implements LedgerLineStore {
+  async insert(lines: LedgerLineInsert[], queryRunner: QueryRunner): Promise<LedgerLine[]> {
+    const entities = lines.map(line => {
+      const entity = new LedgerLineEntity();
+      entity.ledgerAccountId = line.ledgerAccountId;
+      entity.transactionId = line.transactionId;
+      entity.sequence = line.sequence;
+      entity.amount = line.amount;
+      entity.debit = line.debit;
+      entity.credit = line.credit;
+      entity.createdAt = new Date();
+      return entity;
+    });
+    const savedEntities = await queryRunner.manager.save(entities);
+    return savedEntities.map(entity => this.mapToLedgerLine(entity));
+  }
+
+  async findByTransactionId(
+    transactionId: UUID,
+    queryRunner: QueryRunner
+  ): Promise<LedgerLine[]> {
+    return queryRunner.manager.find(LedgerLineEntity, {
+      where: { transactionId },
+    }).then(entities => entities.map(entity => this.mapToLedgerLine(entity)));
+  }
+
+  async findByLedgerAccountId(
+    ledgerAccountId: UUID,
+    queryRunner: QueryRunner
+  ): Promise<LedgerLine[]> {
+    return queryRunner.manager.find(LedgerLineEntity, {
+      where: { ledgerAccountId },
+    }).then(entities => entities.map(entity => this.mapToLedgerLine(entity)));
+  }
+
+  /**
+   * Maps LedgerLineEntity to LedgerLine.
+   */
+  private mapToLedgerLine(entity: LedgerLineEntity): LedgerLine {
+    return {
+      id: entity.id as UUID,
+      accountId: entity.ledgerAccountId,
+      credit: entity.credit,
+      debit: entity.debit,
+      amount: entity.amount,
+      ledgerAccountId: entity.ledgerAccountId,
+      transactionId: entity.transactionId,
+      sequence: entity.sequence,
+      createdAt: entity.createdAt,
+    };
+  }
+}
