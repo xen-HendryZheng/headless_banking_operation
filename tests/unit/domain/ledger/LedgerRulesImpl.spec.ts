@@ -22,7 +22,6 @@ describe('LedgerRulesImpl', () => {
     accountId: 'account-1',
     debit,
     credit,
-    subtype: 'PRINCIPAL',
   });
 
   describe('assertBalanced', () => {

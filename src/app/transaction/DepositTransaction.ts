@@ -1,10 +1,12 @@
 import { DataSource } from 'typeorm';
 import { BaseTransactionCore } from './BaseTransactionCore';
 import { UUID, Currency } from '../../domain/common/Types';
-import { JournalDraft } from '../../domain/ledger/LedgerTypes';
+import { JournalDraft, LedgerLine } from '../../domain/ledger/LedgerTypes';
 import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
-import { TransactionStore } from '../../services/transaction/TransactionStore';
+import { CreateTransactionInput, TransactionStore } from '../../services/transaction/TransactionStore';
+import { InvalidTransactionError } from '../../domain/common/DomainErrors';
+import { TransactionType } from 'stores';
 
 /**
  * Input for deposit transaction.
@@ -16,13 +18,11 @@ export interface DepositInput {
   userAccountId: UUID;
   /** Bank liability ledger account ID (FIRSTCIRCLE_BUSINESS_LIABILITY) */
   bankLiabilityLedgerAccountId: UUID;
-  /** Bank liability account ID (denormalized owner reference) */
-  bankLiabilityAccountId: UUID;
   /** Amount and currency */
   amount: bigint;
   currency: Currency;
-  /** Idempotency key */
-  reference: string;
+  /** Optional */
+  reference?: string;
   /** Optional description */
   description?: string;
 }
@@ -42,45 +42,89 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
     private readonly dataSource: DataSource
   ) {
     super();
+    this.queryRunner = this.dataSource.createQueryRunner();
   }
 
   name(): string {
     return 'DepositTransaction';
   }
 
+  private readonly queryRunner;
+
   validate(input: DepositInput): Promise<void> {
-    // TODO: Implement validation
-    // - amount > 0
-    // - reference not empty
-    // - userLedgerAccountId valid
-    // - bankLiabilityLedgerAccountId valid
-    throw new Error('Not implemented');
+    if (input.amount <= 0n) {
+      throw new InvalidTransactionError('Amount must be greater than zero');
+    }
+
+    if (!input.userLedgerAccountId || input.userLedgerAccountId.trim().length === 0) {
+      throw new InvalidTransactionError('Invalid user ledger account');
+    }
+
+    if (!input.bankLiabilityLedgerAccountId || input.bankLiabilityLedgerAccountId.trim().length === 0) {
+      throw new InvalidTransactionError('Invalid bank liability ledger account');
+    }
+
+    return Promise.resolve();
   }
 
   protected async createTransactionHeader(input: DepositInput): Promise<UUID> {
-    // TODO: Implement
-    // type = DEPOSIT
-    // ledgerAccountId = userLedgerAccountId
-    // counterpartyLedgerAccountId = null
-    // isCredit = true (user receives funds)
-    throw new Error('Not implemented');
+    const transactionInput: CreateTransactionInput = {
+      accountId: input.userAccountId,
+      type: TransactionType.DEPOSIT,
+      ledgerAccountId: input.userLedgerAccountId,
+      counterpartyLedgerAccountId: null,
+      isCredit: true, // user's perspective - receiving funds
+      amount: input.amount,
+      currency: input.currency,
+      reference: input.reference || '',
+      description: input.description
+    };
+
+    const header =  await this.transactionStore.createHeader(transactionInput, this.queryRunner);
+    return header.id;
   }
 
   protected async buildJournal(txId: UUID, input: DepositInput): Promise<JournalDraft> {
-    // TODO: Implement
-    // Lines:
-    //   1. bankLiabilityLedgerAccountId: DEBIT amount
-    //   2. userLedgerAccountId: CREDIT amount
-    throw new Error('Not implemented');
+    const [latestBankLiabilityLine, latestUserCashLine] = await Promise.all([
+      this.ledgerService.getLatestLedgerLine(input.bankLiabilityLedgerAccountId, this.queryRunner),
+      this.ledgerService.getLatestLedgerLine(input.userLedgerAccountId, this.queryRunner)
+    ]);
+    return {
+      transactionId: txId,
+      type: TransactionType.DEPOSIT,
+      currency: input.currency,
+      lines: [
+        {
+          ledgerAccountId: input.bankLiabilityLedgerAccountId,
+          accountId: input.userAccountId,
+          debit: latestBankLiabilityLine ? latestBankLiabilityLine.debit + input.amount : input.amount,
+          credit: latestBankLiabilityLine ? latestBankLiabilityLine.credit : 0n,
+        },
+        {
+          ledgerAccountId: input.userLedgerAccountId,
+          accountId: input.userAccountId,
+          debit: latestUserCashLine ? latestUserCashLine.debit : 0n,
+          credit: latestUserCashLine ? latestUserCashLine.credit + input.amount : input.amount,
+        },
+      ],
+    };
   }
 
-  protected async postLedger(journal: JournalDraft): Promise<void> {
-    // TODO: Implement - use this.ledgerService
-    throw new Error('Not implemented');
+  protected async postLedger(journal: JournalDraft): Promise<LedgerLine[]> {
+    const ledgerLines = await this.ledgerService.post(journal, this.queryRunner);
+    return ledgerLines;
   }
 
-  protected async updateBalances(journal: JournalDraft): Promise<void> {
-    // TODO: Implement - use this.balanceService
-    throw new Error('Not implemented');
+  protected async updateBalances(ledgerLines: LedgerLine[]): Promise<void> {
+    const balanceDelta = ledgerLines.map((line) => {
+      const delta = line.credit - line.debit;
+      return {
+        ledgerAccountId: line.ledgerAccountId,
+        delta,
+        newSequence: line.sequence,
+      };
+    });
+
+    await this.balanceService.apply(balanceDelta, this.queryRunner);
   }
 }

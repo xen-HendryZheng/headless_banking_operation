@@ -34,4 +34,7 @@ export interface LedgerLineStore {
    * Finds ledger lines by ledger account ID.
    */
   findByLedgerAccountId(ledgerAccountId: UUID, queryRunner: QueryRunner): Promise<LedgerLine[]>;
+
+  getLatestLedgerLine(ledgerAccountId: string, queryRunner: QueryRunner): Promise<LedgerLine | null>;
+
 }

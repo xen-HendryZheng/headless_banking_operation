@@ -19,7 +19,6 @@ describe('DepositTransaction', () => {
     userLedgerAccountId: 'user-ledger-123',
     userAccountId: 'user-account-123',
     bankLiabilityLedgerAccountId: 'bank-liability-ledger',
-    bankLiabilityAccountId: 'bank-account',
     amount: 10000n,
     currency: 'USD',
     reference: 'DEP-001',
@@ -40,7 +39,6 @@ describe('DepositTransaction', () => {
     debit,
     credit,
     amount: debit > 0n ? debit : credit,
-    subtype: 'PRINCIPAL',
     sequence,
     createdAt: new Date(),
   });
@@ -54,6 +52,7 @@ describe('DepositTransaction', () => {
 
     mockLedgerService = {
       post: jest.fn(),
+      getLatestLedgerLine: jest.fn().mockResolvedValue(null),
     };
 
     mockBalanceService = {
@@ -100,16 +99,10 @@ describe('DepositTransaction', () => {
       expect(() => depositTransaction.validate(input)).toThrow(InvalidTransactionError);
     });
 
-    it('should throw InvalidTransactionError for empty reference', () => {
-      const input = { ...validInput, reference: '' };
+    it('should not throw for undefined reference (optional field)', () => {
+      const input = { ...validInput, reference: undefined };
 
-      expect(() => depositTransaction.validate(input)).toThrow(InvalidTransactionError);
-    });
-
-    it('should throw InvalidTransactionError for whitespace-only reference', () => {
-      const input = { ...validInput, reference: '   ' };
-
-      expect(() => depositTransaction.validate(input)).toThrow(InvalidTransactionError);
+      expect(() => depositTransaction.validate(input)).not.toThrow();
     });
   });
 
@@ -124,7 +117,7 @@ describe('DepositTransaction', () => {
         currency: 'USD',
         isCredit: true,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'PENDING',
         accountId: validInput.userAccountId,
@@ -163,7 +156,7 @@ describe('DepositTransaction', () => {
         currency: 'USD',
         isCredit: true,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
         accountId: validInput.userAccountId,
@@ -216,7 +209,7 @@ describe('DepositTransaction', () => {
         currency: 'USD',
         isCredit: true,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
         accountId: validInput.userAccountId,
@@ -264,7 +257,7 @@ describe('DepositTransaction', () => {
         currency: 'USD',
         isCredit: true,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
         accountId: validInput.userAccountId,
@@ -309,7 +302,7 @@ describe('DepositTransaction', () => {
         currency: 'USD',
         isCredit: true,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
         accountId: validInput.userAccountId,
@@ -335,7 +328,7 @@ describe('DepositTransaction', () => {
         currency: 'USD',
         isCredit: true,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
         accountId: validInput.userAccountId,

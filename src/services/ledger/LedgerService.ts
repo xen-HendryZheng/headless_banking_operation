@@ -17,4 +17,6 @@ export interface LedgerService {
    * @returns Persisted ledger lines with sequences
    */
   post(journal: JournalDraft, queryRunner: QueryRunner): Promise<LedgerLine[]>;
+
+  getLatestLedgerLine(ledgerAccountId: string, queryRunner: QueryRunner): Promise<LedgerLine | null>;
 }

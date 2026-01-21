@@ -1,5 +1,5 @@
 import { UUID } from '../../domain/common/Types';
-import { JournalDraft } from '../../domain/ledger/LedgerTypes';
+import { JournalDraft, LedgerLine } from '../../domain/ledger/LedgerTypes';
 
 // ===== Common contracts =====
 
@@ -33,8 +33,8 @@ export abstract class BaseTransactionCore<I>
     await this.validate(input);
     const txId = await this.createTransactionHeader(input);
     const journal = await this.buildJournal(txId, input);
-    await this.postLedger(journal);
-    await this.updateBalances(journal);
+    const ledgerLines = await this.postLedger(journal);
+    await this.updateBalances(ledgerLines);
     return { transactionId: txId };
   }
 
@@ -61,10 +61,10 @@ export abstract class BaseTransactionCore<I>
   /**
    * Posts ledger lines from the journal.
    */
-  protected abstract postLedger(journal: JournalDraft): Promise<void>;
+  protected abstract postLedger(journal: JournalDraft): Promise<LedgerLine[]>;
 
   /**
-   * Updates balances from the journal.
+   * Updates balances from the ledger lines.
    */
-  protected abstract updateBalances(journal: JournalDraft): Promise<void>;
+  protected abstract updateBalances(ledgerLines: LedgerLine[]): Promise<void>;
 }

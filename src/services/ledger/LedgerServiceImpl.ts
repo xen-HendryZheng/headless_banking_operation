@@ -23,6 +23,7 @@ export class LedgerServiceImpl implements LedgerService {
       return [];
     }
 
+    // This is where balance locking would occur and should be done prior to sequence allocation
     const sequences = await Promise.all(
       journal.lines.map((line) =>
         this.sequencer.getNextSequence(line.ledgerAccountId, queryRunner)
@@ -40,5 +41,9 @@ export class LedgerServiceImpl implements LedgerService {
     }));
 
     return this.ledgerLineStore.insert(inserts, queryRunner);
+  }
+
+  async getLatestLedgerLine(ledgerAccountId: string, queryRunner: QueryRunner): Promise<LedgerLine | null> {
+    return this.ledgerLineStore.getLatestLedgerLine(ledgerAccountId, queryRunner);
   }
 }

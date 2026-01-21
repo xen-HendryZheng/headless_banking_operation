@@ -13,31 +13,44 @@ export class BalanceServiceImpl implements BalanceService {
     private readonly balanceStore: BalanceStore
   ) {}
 
+  // Assuming this is still within same transaction block as early get sequence balance locking
   async apply(deltas: BalanceDelta[], queryRunner: QueryRunner): Promise<BalanceRecord[]> {
-    // TODO: Implement
-    // 1. Extract unique ledger account IDs from deltas
-    // 2. Sort IDs to prevent deadlocks
-    // 3. Lock and get all balances via balanceStore.lockAndGetMany()
-    // 4. For each delta:
-    //    a. Get current balance (or 0 if new)
-    //    b. Check balanceRules.assertNoNegative(current, delta)
-    //    c. Calculate new balance
-    //    d. Upsert/update balance
-    // 5. Return updated balance records
-    throw new Error('Not implemented');
+    if (deltas.length === 0) {
+      return [];
+    }
+
+    const uniqueIds = Array.from(new Set(deltas.map(delta => delta.ledgerAccountId))).sort();
+    const lockedBalances = await this.balanceStore.lockAndGetMany(uniqueIds, queryRunner);
+    const balanceMap = new Map<UUID, BalanceRecord>(
+      lockedBalances.map(record => [record.ledgerAccountId, record])
+    );
+
+    const updatedRecords: BalanceRecord[] = [];
+
+    for (const delta of deltas) {
+      const currentBalance = balanceMap.get(delta.ledgerAccountId)?.balanceAmount ?? 0n;
+      this.balanceRules.assertNoNegative(currentBalance, delta.delta);
+
+      const newBalance = currentBalance + delta.delta;
+      const updated = await this.balanceStore.updateBalance(
+        delta.ledgerAccountId,
+        newBalance,
+        delta.newSequence,
+        queryRunner
+      );
+
+      balanceMap.set(delta.ledgerAccountId, updated);
+      updatedRecords.push(updated);
+    }
+
+    return updatedRecords;
   }
 
-  async lockForLedgerAccounts(ledgerAccountIds: UUID[], queryRunner: QueryRunner): Promise<void> {
-
-  };
-
   async getBalance(ledgerAccountId: UUID, queryRunner: QueryRunner): Promise<BalanceRecord | null> {
-    // TODO: Implement
-    throw new Error('Not implemented');
+    return this.balanceStore.lockAndGet(ledgerAccountId, queryRunner);
   }
 
   async getBalances(ledgerAccountIds: UUID[], queryRunner: QueryRunner): Promise<BalanceRecord[]> {
-    // TODO: Implement
-    throw new Error('Not implemented');
+    return this.balanceStore.lockAndGetMany(ledgerAccountIds, queryRunner);
   }
 }

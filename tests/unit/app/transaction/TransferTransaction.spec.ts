@@ -40,7 +40,6 @@ describe('TransferTransaction', () => {
     debit,
     credit,
     amount: debit > 0n ? debit : credit,
-    subtype: 'PRINCIPAL',
     sequence,
     createdAt: new Date(),
   });
@@ -54,6 +53,7 @@ describe('TransferTransaction', () => {
 
     mockLedgerService = {
       post: jest.fn(),
+      getLatestLedgerLine: jest.fn(),
     };
 
     mockBalanceService = {

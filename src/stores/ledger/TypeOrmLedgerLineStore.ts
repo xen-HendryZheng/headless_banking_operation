@@ -42,6 +42,16 @@ export class TypeOrmLedgerLineStore implements LedgerLineStore {
     }).then(entities => entities.map(entity => this.mapToLedgerLine(entity)));
   }
 
+  async getLatestLedgerLine(ledgerAccountId: string, queryRunner: QueryRunner): Promise<LedgerLine | null> {
+    const ledgerLineEntity = await queryRunner.manager
+      .createQueryBuilder(LedgerLineEntity, 'ledgerLine')
+      .where('ledgerLine.ledger_account_id = :ledgerAccountId', { ledgerAccountId })
+      .orderBy('ledgerLine.sequence', 'DESC')
+      .getOne();
+
+    return ledgerLineEntity ? this.mapToLedgerLine(ledgerLineEntity) : null;
+  }
+
   /**
    * Maps LedgerLineEntity to LedgerLine.
    */

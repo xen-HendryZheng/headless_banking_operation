@@ -1,9 +1,17 @@
 import { DataSource, QueryRunner } from 'typeorm';
-import { AccountService, CreateUserAccountInput, CreateUserAccountResult } from '../../../../src/app/account/AccountService';
-import { AccountStore, Account } from '../../../../src/services/account/AccountStore';
-import { LedgerAccountStore, LedgerAccount } from '../../../../src/services/account/LedgerAccountStore';
+import {
+  AccountService,
+  AccountServiceImpl,
+  CreateUserAccountInput,
+  CreateUserAccountResult,
+  AccountStore,
+  Account,
+  LedgerAccountStore,
+  LedgerAccount,
+} from '../../../../src/services/account';
 import { BalanceStore } from '../../../../src/services/balance/BalanceStore';
 import { BalanceRecord } from '../../../../src/services/balance/BalanceService';
+import { LedgerAccountType } from '../../../../src/stores/entities/enums';
 
 describe('AccountService', () => {
   let accountService: AccountService;
@@ -35,7 +43,7 @@ describe('AccountService', () => {
     id: 'ledger-account-123',
     accountId: 'account-123',
     currency: 'USD',
-    type: 'USER_CASH',
+    type: LedgerAccountType.USER_CASH,
     status: 'ACTIVE',
     metadata: null,
     createdAt: new Date(),
@@ -65,8 +73,10 @@ describe('AccountService', () => {
     mockBalanceStore = {
       lockAndGet: jest.fn(),
       lockAndGetMany: jest.fn(),
-      upsert: jest.fn(),
+      insert: jest.fn(),
       updateBalance: jest.fn(),
+      getBalance: jest.fn(),
+      getBalances: jest.fn(),
     };
 
     mockQueryRunner = {
@@ -82,7 +92,7 @@ describe('AccountService', () => {
       createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
     } as unknown as jest.Mocked<DataSource>;
 
-    accountService = new AccountService(
+    accountService = new AccountServiceImpl(
       mockAccountStore,
       mockLedgerAccountStore,
       mockBalanceStore,
@@ -94,7 +104,7 @@ describe('AccountService', () => {
     it('should create account, ledger account, and initialize balance in a transaction', async () => {
       mockAccountStore.create.mockResolvedValue(mockAccount);
       mockLedgerAccountStore.create.mockResolvedValue(mockLedgerAccount);
-      mockBalanceStore.upsert.mockResolvedValue(mockBalanceRecord);
+      mockBalanceStore.insert.mockResolvedValue(mockBalanceRecord);
 
       const result = await accountService.createUserAccount(validInput);
 
@@ -113,18 +123,18 @@ describe('AccountService', () => {
         mockQueryRunner
       );
 
-      // Verify ledger account creation
+      // Verify ledger account creation (USER_CASH)
       expect(mockLedgerAccountStore.create).toHaveBeenCalledWith(
         expect.objectContaining({
           accountId: mockAccount.id,
           currency: validInput.currency,
-          type: 'USER_CASH',
+          type: LedgerAccountType.USER_CASH,
         }),
         mockQueryRunner
       );
 
       // Verify balance initialization
-      expect(mockBalanceStore.upsert).toHaveBeenCalledWith(
+      expect(mockBalanceStore.insert).toHaveBeenCalledWith(
         mockLedgerAccount.id,
         0n,
         0,
@@ -158,7 +168,7 @@ describe('AccountService', () => {
     it('should rollback transaction on balance initialization failure', async () => {
       mockAccountStore.create.mockResolvedValue(mockAccount);
       mockLedgerAccountStore.create.mockResolvedValue(mockLedgerAccount);
-      mockBalanceStore.upsert.mockRejectedValue(new Error('Balance initialization failed'));
+      mockBalanceStore.insert.mockRejectedValue(new Error('Balance initialization failed'));
 
       await expect(accountService.createUserAccount(validInput)).rejects.toThrow('Balance initialization failed');
 
@@ -192,7 +202,7 @@ describe('AccountService', () => {
         {
           ...mockLedgerAccount,
           id: 'ledger-account-456',
-          type: 'FIRSTCIRCLE_BUSINESS_LIABILITY',
+          type: LedgerAccountType.FIRSTCIRCLE_BUSINESS_LIABILITY,
         },
       ];
       mockLedgerAccountStore.findByAccountId.mockResolvedValue(ledgerAccounts);

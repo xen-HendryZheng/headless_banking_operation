@@ -31,8 +31,10 @@ describe('BalanceServiceImpl', () => {
     mockBalanceStore = {
       lockAndGet: jest.fn(),
       lockAndGetMany: jest.fn(),
-      upsert: jest.fn(),
+      insert: jest.fn(),
       updateBalance: jest.fn(),
+      getBalance: jest.fn(),
+      getBalances: jest.fn(),
     };
 
     mockQueryRunner = {} as jest.Mocked<QueryRunner>;
@@ -52,7 +54,7 @@ describe('BalanceServiceImpl', () => {
         createBalanceRecord('ledger-2', 5000n, 0),
       ]);
 
-      mockBalanceStore.upsert.mockImplementation(async (id, balance, seq) =>
+      mockBalanceStore.updateBalance.mockImplementation(async (id, balance, seq) =>
         createBalanceRecord(id, balance, seq)
       );
 
@@ -73,7 +75,7 @@ describe('BalanceServiceImpl', () => {
         createBalanceRecord('ledger-1', 1000n, 0),
       ]);
 
-      mockBalanceStore.upsert.mockImplementation(async (id, balance, seq) =>
+      mockBalanceStore.updateBalance.mockImplementation(async (id, balance, seq) =>
         createBalanceRecord(id, balance, seq)
       );
 
@@ -91,13 +93,13 @@ describe('BalanceServiceImpl', () => {
         createBalanceRecord('ledger-1', 500n, 4),
       ]);
 
-      mockBalanceStore.upsert.mockResolvedValue(
+      mockBalanceStore.updateBalance.mockResolvedValue(
         createBalanceRecord('ledger-1', 1500n, 5)
       );
 
       await balanceService.apply(deltas, mockQueryRunner);
 
-      expect(mockBalanceStore.upsert).toHaveBeenCalledWith(
+      expect(mockBalanceStore.updateBalance).toHaveBeenCalledWith(
         'ledger-1',
         1500n, // 500 + 1000
         5,
@@ -116,7 +118,7 @@ describe('BalanceServiceImpl', () => {
         createBalanceRecord('ledger-2', 100n, 0),
       ]);
 
-      mockBalanceStore.upsert
+      mockBalanceStore.updateBalance
         .mockResolvedValueOnce(createBalanceRecord('ledger-1', 1000n, 1))
         .mockResolvedValueOnce(createBalanceRecord('ledger-2', 600n, 1));
 
@@ -144,7 +146,7 @@ describe('BalanceServiceImpl', () => {
         InsufficientBalanceError
       );
 
-      expect(mockBalanceStore.upsert).not.toHaveBeenCalled();
+      expect(mockBalanceStore.updateBalance).not.toHaveBeenCalled();
     });
 
     it('should sort ledger account IDs to prevent deadlocks', async () => {
@@ -160,7 +162,7 @@ describe('BalanceServiceImpl', () => {
         createBalanceRecord('ledger-z', 0n, 0),
       ]);
 
-      mockBalanceStore.upsert.mockImplementation(async (id, balance, seq) =>
+      mockBalanceStore.updateBalance.mockImplementation(async (id, balance, seq) =>
         createBalanceRecord(id, balance, seq)
       );
 
@@ -180,7 +182,7 @@ describe('BalanceServiceImpl', () => {
       // No existing balance - returns empty
       mockBalanceStore.lockAndGetMany.mockResolvedValue([]);
 
-      mockBalanceStore.upsert.mockResolvedValue(
+      mockBalanceStore.updateBalance.mockResolvedValue(
         createBalanceRecord('new-ledger', 1000n, 1)
       );
 

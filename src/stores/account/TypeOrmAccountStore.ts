@@ -6,7 +6,7 @@ import {
 } from '../../services/account/AccountStore';
 import { UUID } from '../../domain/common/Types';
 import { AccountEntity } from '../entities/AccountEntity';
-import { AccountType, AccountStatus } from '../entities/enums';
+import { AccountStatus } from '../entities/enums';
 
 /**
  * TypeORM implementation of AccountStore.

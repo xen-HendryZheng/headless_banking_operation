@@ -8,7 +8,6 @@ describe('Journal', () => {
     accountId: 'account-1',
     debit: amount,
     credit: 0n,
-    subtype: 'PRINCIPAL',
   });
 
   const createCreditLine = (ledgerAccountId: string, amount: bigint): LedgerLineDraft => ({
@@ -16,7 +15,6 @@ describe('Journal', () => {
     accountId: 'account-1',
     debit: 0n,
     credit: amount,
-    subtype: 'PRINCIPAL',
   });
 
   describe('create', () => {

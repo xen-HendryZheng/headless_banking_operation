@@ -21,7 +21,7 @@ import { DepositTransaction } from '../app/transaction/DepositTransaction';
 import { WithdrawTransaction } from '../app/transaction/WithdrawTransaction';
 import { TransferTransaction } from '../app/transaction/TransferTransaction';
 import { TransactionService } from '../app/transaction/TransactionService';
-import { AccountService } from '../app/account/AccountService';
+import { AccountService, AccountServiceImpl } from '../services/account';
 
 /**
  * Dependency injection container.
@@ -80,7 +80,7 @@ export async function createContainer(dataSource: DataSource): Promise<Container
     transferTransaction
   );
 
-  const accountService = new AccountService(
+  const accountService = new AccountServiceImpl(
     accountStore,
     ledgerAccountStore,
     balanceStore,

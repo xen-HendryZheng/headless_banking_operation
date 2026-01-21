@@ -10,6 +10,8 @@ module.exports = {
     '^@services/(.*)$': '<rootDir>/src/services/$1',
     '^@infrastructure/(.*)$': '<rootDir>/src/infrastructure/$1',
     '^@bootstrap/(.*)$': '<rootDir>/src/bootstrap/$1',
+    '^stores$': '<rootDir>/src/stores',
+    '^@domain/common$': '<rootDir>/src/domain/common',
   },
   collectCoverageFrom: [
     'src/**/*.ts',

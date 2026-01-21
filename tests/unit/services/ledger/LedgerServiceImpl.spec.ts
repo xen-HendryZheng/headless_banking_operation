@@ -23,7 +23,6 @@ describe('LedgerServiceImpl', () => {
     accountId: 'account-1',
     debit,
     credit,
-    subtype: 'PRINCIPAL',
   });
 
   // Helper to create persisted ledger line
@@ -42,7 +41,6 @@ describe('LedgerServiceImpl', () => {
     debit,
     credit,
     amount: debit > 0n ? debit : credit,
-    subtype: 'PRINCIPAL',
     sequence,
     createdAt: new Date(),
   });
@@ -57,6 +55,7 @@ describe('LedgerServiceImpl', () => {
       insert: jest.fn(),
       findByTransactionId: jest.fn(),
       findByLedgerAccountId: jest.fn(),
+      getLatestLedgerLine: jest.fn(),
     };
 
     mockSequencer = {

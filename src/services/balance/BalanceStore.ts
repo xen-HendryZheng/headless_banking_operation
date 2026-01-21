@@ -8,13 +8,12 @@ import { BalanceRecord } from './BalanceService';
  */
 export interface BalanceStore {
   /**
-   * Locks and gets a balance record (SELECT ... FOR UPDATE).
+   * Lock and fetch a balance row.
    */
   lockAndGet(ledgerAccountId: UUID, queryRunner: QueryRunner): Promise<BalanceRecord | null>;
 
   /**
-   * Locks and gets multiple balance records.
-   * IMPORTANT: Sort ledgerAccountIds to prevent deadlocks.
+   * Lock and fetch multiple balance rows.
    */
   lockAndGetMany(ledgerAccountIds: UUID[], queryRunner: QueryRunner): Promise<BalanceRecord[]>;
 
@@ -37,4 +36,11 @@ export interface BalanceStore {
     newSequence: number,
     queryRunner: QueryRunner
   ): Promise<BalanceRecord>;
+
+  /**
+   * Get balance records only
+   * 
+   */
+  getBalance(ledgerAccountId: UUID, queryRunner: QueryRunner): Promise<BalanceRecord | null>;
+  getBalances(ledgerAccountIds: UUID[], queryRunner: QueryRunner): Promise<BalanceRecord[]>;
 }

@@ -9,13 +9,12 @@ import { BalanceEntity } from '../entities/BalanceEntity';
  * Handles balance persistence with row-level locking for concurrency safety.
  */
 export class TypeOrmBalanceStore implements BalanceStore {
-  async lockAndGet(
-    ledgerAccountId: UUID,
-    queryRunner: QueryRunner
-  ): Promise<BalanceRecord | null> {
-    const balanceEntity = await queryRunner.manager.createQueryBuilder(BalanceEntity, 'balance')
-      .where('balance.ledger_account_id = :ledgerAccountId', { ledgerAccountId })
+
+  async lockAndGet(ledgerAccountId: UUID, queryRunner: QueryRunner): Promise<BalanceRecord | null> {
+    const balanceEntity = await queryRunner.manager
+      .createQueryBuilder(BalanceEntity, 'balance')
       .setLock('pessimistic_write')
+      .where('balance.ledger_account_id = :ledgerAccountId', { ledgerAccountId })
       .getOne();
 
     if (!balanceEntity) {
@@ -25,16 +24,54 @@ export class TypeOrmBalanceStore implements BalanceStore {
     return this.mapToBalanceRecord(balanceEntity);
   }
 
-  async lockAndGetMany(
-    ledgerAccountIds: UUID[],
-    queryRunner: QueryRunner
-  ): Promise<BalanceRecord[]> {
-    const balanceEntities = await queryRunner.manager.createQueryBuilder(BalanceEntity, 'balance')
-      .where('balance.ledger_account_id IN (:...ledgerAccountIds)', { ledgerAccountIds })
+  async lockAndGetMany(ledgerAccountIds: UUID[], queryRunner: QueryRunner): Promise<BalanceRecord[]> {
+    if (ledgerAccountIds.length === 0) {
+      return [];
+    }
+
+    const balanceEntities = await queryRunner.manager
+      .createQueryBuilder(BalanceEntity, 'balance')
       .setLock('pessimistic_write')
+      .where('balance.ledger_account_id IN (:...ledgerAccountIds)', { ledgerAccountIds })
+      .orderBy('balance.ledger_account_id', 'ASC')
       .getMany();
 
     return balanceEntities.map(entity => this.mapToBalanceRecord(entity));
+  }
+
+  async getBalance(ledgerAccountId: UUID, queryRunner: QueryRunner): Promise<BalanceRecord | null> {
+    const balanceEntity = await queryRunner.manager
+      .createQueryBuilder(BalanceEntity, 'balance')
+      .where('balance.ledger_account_id = :ledgerAccountId', { ledgerAccountId })
+      .getOne();
+
+    if (!balanceEntity) {
+      return null;
+    }
+
+    return this.mapToBalanceRecord(balanceEntity);
+  }
+
+  async getBalances(ledgerAccountIds: UUID[], queryRunner: QueryRunner): Promise<BalanceRecord[]> {
+    const balanceEntities = await queryRunner.manager
+      .createQueryBuilder(BalanceEntity, 'balance')
+      .where('balance.ledger_account_id IN (:...ledgerAccountIds)', { ledgerAccountIds })
+      .getMany();
+
+    return balanceEntities.map(entity => this.mapToBalanceRecord(entity));
+  }
+
+  async upsert(
+    ledgerAccountId: UUID,
+    newBalance: bigint,
+    newSequence: number,
+    queryRunner: QueryRunner
+  ): Promise<BalanceRecord> {
+    const existing = await this.lockAndGet(ledgerAccountId, queryRunner);
+    if (existing) {
+      return this.updateBalance(ledgerAccountId, newBalance, newSequence, queryRunner);
+    }
+    return this.insert(ledgerAccountId, newBalance, newSequence, queryRunner);
   }
 
   async insert(

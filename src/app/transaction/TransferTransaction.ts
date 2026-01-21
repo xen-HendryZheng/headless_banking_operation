@@ -1,7 +1,7 @@
 import { DataSource } from 'typeorm';
 import { BaseTransactionCore } from './BaseTransactionCore';
 import { UUID, Currency } from '../../domain/common/Types';
-import { JournalDraft } from '../../domain/ledger/LedgerTypes';
+import { JournalDraft, LedgerLine } from '../../domain/ledger/LedgerTypes';
 import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
 import { TransactionStore } from '../../services/transaction/TransactionStore';
@@ -77,12 +77,12 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
     throw new Error('Not implemented');
   }
 
-  protected async postLedger(journal: JournalDraft): Promise<void> {
+  protected async postLedger(journal: JournalDraft): Promise<LedgerLine[]> {
     // TODO: Implement - use this.ledgerService
     throw new Error('Not implemented');
   }
 
-  protected async updateBalances(journal: JournalDraft): Promise<void> {
+  protected async updateBalances(ledgerLines: LedgerLine[]): Promise<void> {
     // TODO: Implement - use this.balanceService
     throw new Error('Not implemented');
   }

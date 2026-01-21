@@ -128,8 +128,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 10000n,
+                amount: 10000n,
         currency: 'USD',
         reference: `DEP-${Date.now()}`,
         description: 'Test deposit',
@@ -157,8 +156,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 5000n,
+                amount: 5000n,
         currency: 'USD',
         reference: `DEP-${Date.now()}`,
       };
@@ -180,8 +178,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 7500n,
+                amount: 7500n,
         currency: 'USD',
         reference: `DEP-${Date.now()}`,
       };
@@ -207,8 +204,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 10000n,
+                amount: 10000n,
         currency: 'USD',
         reference,
       };
@@ -237,8 +233,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 20000n,
+                amount: 20000n,
         currency: 'USD',
         reference: `SEED-${Date.now()}`,
       };
@@ -250,8 +245,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 5000n,
+                amount: 5000n,
         currency: 'USD',
         reference: `WTH-${Date.now()}`,
       };
@@ -278,8 +272,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 50000n, // More than available 20000
+                amount: 50000n, // More than available 20000
         currency: 'USD',
         reference: `WTH-${Date.now()}`,
       };
@@ -299,8 +292,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 50000n,
+                amount: 50000n,
         currency: 'USD',
         reference: `WTH-${Date.now()}`,
       };
@@ -326,8 +318,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 15000n,
+                amount: 15000n,
         currency: 'USD',
         reference: `SEED-${Date.now()}`,
       };
@@ -423,8 +414,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 1000n,
+                amount: 1000n,
         currency: 'USD',
         reference: `DEP-CONCURRENT-${Date.now()}-${i}`,
       }));
@@ -447,8 +437,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 5000n,
+                amount: 5000n,
         currency: 'USD',
         reference: `SEED-${Date.now()}`,
       });
@@ -458,8 +447,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 3000n, // Each tries to withdraw 3000, but only 5000 available
+                amount: 3000n, // Each tries to withdraw 3000, but only 5000 available
         currency: 'USD',
         reference: `WTH-CONCURRENT-${Date.now()}-${i}`,
       }));
@@ -490,8 +478,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 10000n,
+                amount: 10000n,
         currency: 'USD',
         reference: `SEED1-${Date.now()}`,
       });
@@ -500,8 +487,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: secondUserLedgerAccount.id,
         userAccountId: secondUserAccount.id,
         bankLiabilityLedgerAccountId: secondBankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: secondUserAccount.id,
-        amount: 10000n,
+                amount: 10000n,
         currency: 'USD',
         reference: `SEED2-${Date.now()}`,
       });
@@ -554,8 +540,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 10000n,
+                amount: 10000n,
         currency: 'USD',
         reference: `INV-DEP-${Date.now()}`,
       });
@@ -564,8 +549,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: secondUserLedgerAccount.id,
         userAccountId: secondUserAccount.id,
         bankLiabilityLedgerAccountId: secondBankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: secondUserAccount.id,
-        amount: 5000n,
+                amount: 5000n,
         currency: 'USD',
         reference: `INV-DEP2-${Date.now()}`,
       });
@@ -584,8 +568,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: secondUserLedgerAccount.id,
         userAccountId: secondUserAccount.id,
         bankLiabilityLedgerAccountId: secondBankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: secondUserAccount.id,
-        amount: 2000n,
+                amount: 2000n,
         currency: 'USD',
         reference: `INV-WTH-${Date.now()}`,
       });
@@ -603,8 +586,7 @@ describe('Transaction Flows (Integration)', () => {
         userLedgerAccountId: userLedgerAccount.id,
         userAccountId: userAccount.id,
         bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-        bankLiabilityAccountId: userAccount.id,
-        amount: 5000n,
+                amount: 5000n,
         currency: 'USD',
         reference: `BAL-DEP-${Date.now()}`,
       });
@@ -615,8 +597,7 @@ describe('Transaction Flows (Integration)', () => {
           userLedgerAccountId: userLedgerAccount.id,
           userAccountId: userAccount.id,
           bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-          bankLiabilityAccountId: userAccount.id,
-          amount: 10000n,
+                    amount: 10000n,
           currency: 'USD',
           reference: `BAL-WTH-${Date.now()}`,
         });
@@ -639,8 +620,7 @@ describe('Transaction Flows (Integration)', () => {
           userLedgerAccountId: userLedgerAccount.id,
           userAccountId: userAccount.id,
           bankLiabilityLedgerAccountId: bankLiabilityLedgerAccount.id,
-          bankLiabilityAccountId: userAccount.id,
-          amount: 1000n,
+                    amount: 1000n,
           currency: 'USD',
           reference: `SEQ-DEP-${Date.now()}-${i}`,
         });

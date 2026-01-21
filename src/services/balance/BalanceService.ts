@@ -37,8 +37,6 @@ export interface BalanceService {
    */
   apply(deltas: BalanceDelta[], queryRunner: QueryRunner): Promise<BalanceRecord[]>;
 
-  lockForLedgerAccounts(ledgerAccountIds: UUID[], queryRunner: QueryRunner): Promise<void>;
-
   /**
    * Gets the current balance for a ledger account.
    */

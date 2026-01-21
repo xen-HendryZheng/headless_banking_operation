@@ -117,7 +117,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 10000n,
           amount: 10000n,
-          subtype: 'PRINCIPAL',
           sequence: 1,
         },
         {
@@ -127,7 +126,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 10000n,
           credit: 0n,
           amount: 10000n,
-          subtype: 'PRINCIPAL',
           sequence: 1,
         },
       ];
@@ -148,7 +146,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 5000n,
           amount: 5000n,
-          subtype: 'PRINCIPAL',
           sequence: 1,
         },
       ];
@@ -172,7 +169,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 1000n,
           amount: 1000n,
-          subtype: 'PRINCIPAL',
           sequence: 5,
         },
         {
@@ -182,7 +178,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 1000n,
           credit: 0n,
           amount: 1000n,
-          subtype: 'PRINCIPAL',
           sequence: 3,
         },
       ];
@@ -206,7 +201,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 10000n,
           amount: 10000n,
-          subtype: 'PRINCIPAL',
           sequence: 1,
         },
         {
@@ -216,7 +210,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 10000n,
           credit: 0n,
           amount: 10000n,
-          subtype: 'PRINCIPAL',
           sequence: 1,
         },
       ];
@@ -267,7 +260,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 10000n,
           amount: 10000n,
-          subtype: 'PRINCIPAL',
           sequence: 1,
         },
         {
@@ -277,7 +269,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 5000n,
           amount: 5000n,
-          subtype: 'PRINCIPAL',
           sequence: 2,
         },
       ];
@@ -330,7 +321,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 5000n,
           amount: 5000n,
-          subtype: 'PRINCIPAL',
           sequence: 3, // Middle sequence
         },
         {
@@ -340,7 +330,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 10000n,
           amount: 10000n,
-          subtype: 'PRINCIPAL',
           sequence: 1, // First sequence
         },
         {
@@ -350,7 +339,6 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 3000n,
           amount: 3000n,
-          subtype: 'PRINCIPAL',
           sequence: 5, // Last sequence
         },
       ];

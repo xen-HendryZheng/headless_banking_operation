@@ -19,7 +19,6 @@ describe('WithdrawTransaction', () => {
     userLedgerAccountId: 'user-ledger-123',
     userAccountId: 'user-account-123',
     bankLiabilityLedgerAccountId: 'bank-liability-ledger',
-    bankLiabilityAccountId: 'bank-account',
     amount: 5000n,
     currency: 'USD',
     reference: 'WTH-001',
@@ -40,7 +39,6 @@ describe('WithdrawTransaction', () => {
     debit,
     credit,
     amount: debit > 0n ? debit : credit,
-    subtype: 'PRINCIPAL',
     sequence,
     createdAt: new Date(),
   });
@@ -54,6 +52,7 @@ describe('WithdrawTransaction', () => {
 
     mockLedgerService = {
       post: jest.fn(),
+      getLatestLedgerLine: jest.fn().mockResolvedValue(null),
     };
 
     mockBalanceService = {
@@ -100,10 +99,10 @@ describe('WithdrawTransaction', () => {
       expect(() => withdrawTransaction.validate(input)).toThrow(InvalidTransactionError);
     });
 
-    it('should throw InvalidTransactionError for empty reference', () => {
-      const input = { ...validInput, reference: '' };
+    it('should not throw for undefined reference (optional field)', () => {
+      const input = { ...validInput, reference: undefined };
 
-      expect(() => withdrawTransaction.validate(input)).toThrow(InvalidTransactionError);
+      expect(() => withdrawTransaction.validate(input)).not.toThrow();
     });
   });
 
@@ -117,7 +116,7 @@ describe('WithdrawTransaction', () => {
         currency: 'USD',
         isCredit: false,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'PENDING',
         accountId: validInput.userAccountId,
@@ -156,7 +155,7 @@ describe('WithdrawTransaction', () => {
         currency: 'USD',
         isCredit: false,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
         accountId: validInput.userAccountId,
@@ -208,7 +207,7 @@ describe('WithdrawTransaction', () => {
         currency: 'USD',
         isCredit: false,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
         accountId: validInput.userAccountId,
@@ -255,7 +254,7 @@ describe('WithdrawTransaction', () => {
         currency: 'USD',
         isCredit: false,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
         accountId: validInput.userAccountId,
@@ -297,7 +296,7 @@ describe('WithdrawTransaction', () => {
         currency: 'USD',
         isCredit: false,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
         accountId: validInput.userAccountId,
@@ -328,7 +327,7 @@ describe('WithdrawTransaction', () => {
         currency: 'USD',
         isCredit: false,
         amount: validInput.amount,
-        reference: validInput.reference,
+        reference: validInput.reference || '',
         description: validInput.description || null,
         status: 'POSTED',
         accountId: validInput.userAccountId,
