@@ -91,7 +91,7 @@ const container = await createContainer(dataSource);
 // Deposit funds
 await container.transactionService.deposit({
   accountId: 'user-uuid',
-  amount: 10000n,        // $100.00 in cents
+  amount: 10000n,        // $10,000
   currency: 'USD',
   reference: 'DEP-001',
   description: 'Initial deposit',
@@ -100,7 +100,7 @@ await container.transactionService.deposit({
 // Withdraw funds
 await container.transactionService.withdraw({
   accountId: 'user-uuid',
-  amount: 5000n,
+  amount: 5000n,         // $5,000
   currency: 'USD',
   reference: 'WTH-001',
 });
@@ -109,7 +109,7 @@ await container.transactionService.withdraw({
 await container.transactionService.transfer({
   senderAccountId: 'sender-uuid',
   receiverAccountId: 'receiver-uuid',
-  amount: 2500n,
+  amount: 2500n,         // $2,500
   currency: 'USD',
   reference: 'TRF-001',
 });
@@ -126,11 +126,6 @@ const result = await container.accountService.createUserAccount({
   identifier: 'john.doe@example.com',
   currency: 'USD',
 });
-
-// Returns: { account, ledgerAccounts, balance }
-// - account: The main user account
-// - ledgerAccounts: [USER_CASH, FIRSTCIRCLE_BUSINESS_LIABILITY]
-// - balance: Initial zero balance
 
 // Get user balance
 const balance = await container.accountService.getUserBalance(accountId);
@@ -260,7 +255,7 @@ async function main() {
     currency: 'USD',
   });
 
-  // Deposit $100 to Alice
+  // Deposit $10,000 to Alice
   await container.transactionService.deposit({
     accountId: alice.account.id,
     amount: 10000n,
@@ -268,7 +263,7 @@ async function main() {
     reference: 'DEP-001',
   });
 
-  // Transfer $25 from Alice to Bob
+  // Transfer $2,500 from Alice to Bob
   await container.transactionService.transfer({
     senderAccountId: alice.account.id,
     receiverAccountId: bob.account.id,
@@ -281,8 +276,8 @@ async function main() {
   const aliceBalance = await container.accountService.getUserBalance(alice.account.id);
   const bobBalance = await container.accountService.getUserBalance(bob.account.id);
 
-  console.log(`Alice: ${aliceBalance}`);  // 7500 ($75.00)
-  console.log(`Bob: ${bobBalance}`);      // 2500 ($25.00)
+  console.log(`Alice: ${aliceBalance}`);  // 7500 ($7,500)
+  console.log(`Bob: ${bobBalance}`);      // 2500 ($2,500)
 }
 ```
 
