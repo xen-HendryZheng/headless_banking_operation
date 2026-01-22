@@ -13,14 +13,12 @@ src/
 │   └── container.ts           # Creates and wires all dependencies
 │
 ├── app/                       # Application layer (use cases)
-│   ├── transaction/
-│   │   ├── TransactionService.ts    # Facade for deposit/withdraw/transfer
-│   │   ├── BaseTransactionCore.ts   # Abstract base with Template Method pattern
-│   │   ├── DepositTransaction.ts    # Money entering the system
-│   │   ├── WithdrawTransaction.ts   # Money leaving the system
-│   │   └── TransferTransaction.ts   # Internal transfers between accounts
-│   └── account/
-│       └── (uses AccountService from services layer)
+│   └── transaction/
+│       ├── TransactionService.ts    # Facade for deposit/withdraw/transfer
+│       ├── BaseTransactionCore.ts   # Abstract base with Template Method pattern
+│       ├── DepositTransaction.ts    # Money entering the system
+│       ├── WithdrawTransaction.ts   # Money leaving the system
+│       └── TransferTransaction.ts   # Internal transfers between accounts
 │
 ├── domain/                    # Domain layer (business rules)
 │   ├── common/
