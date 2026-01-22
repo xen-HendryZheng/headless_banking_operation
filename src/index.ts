@@ -73,6 +73,7 @@ async function main(): Promise<Container> {
       reference: 'Withdrawal by bUser',
       description: 'Withdrawing funds',
     });
+    console.log('Withdrew $1,000.00 USD from bUser');
 
     const aUserBalance = await container.accountService.getUserBalance(
       aUser.account.id
