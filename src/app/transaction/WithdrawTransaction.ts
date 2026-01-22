@@ -5,8 +5,8 @@ import { JournalDraft, LedgerLine } from '../../domain/ledger/LedgerTypes';
 import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
 import { CreateTransactionInput, TransactionStore } from '../../services/transaction/TransactionStore';
-import { InvalidTransactionError, InsufficientBalanceError } from '@domain/common';
-import { LedgerAccountType, TransactionType } from 'stores';
+import { InvalidTransactionError, InsufficientBalanceError } from '../../domain/common/DomainErrors';
+import { LedgerAccountType, TransactionType } from '../../stores/entities/enums';
 import { LedgerAccountStore } from '../../services/account/LedgerAccountStore';
 
 /**

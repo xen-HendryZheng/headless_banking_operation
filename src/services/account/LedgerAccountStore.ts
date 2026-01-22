@@ -1,6 +1,6 @@
 import { QueryRunner } from 'typeorm';
 import { UUID, Currency } from '../../domain/common/Types';
-import { LedgerAccountType } from 'stores';
+import { LedgerAccountType } from '../../stores/entities/enums';
 
 /**
  * Ledger account record returned from store.

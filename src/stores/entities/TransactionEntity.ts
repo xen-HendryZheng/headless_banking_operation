@@ -39,7 +39,7 @@ export class TransactionEntity {
   @Column({ type: 'bigint', transformer: new BigIntTransformer() })
   amount!: bigint;
 
-  @Column({ type: 'varchar', length: 255, unique: true })
+  @Column({ type: 'varchar', length: 255 })
   reference!: string;
 
   @Column({ type: 'text', nullable: true })

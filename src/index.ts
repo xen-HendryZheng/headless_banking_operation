@@ -36,26 +36,39 @@ async function main(): Promise<Container> {
     // Deposit initial funds to aUser
     await container.transactionService.deposit({
       accountId: aUser.account.id,
-      amount: 1_000_000n, // $10,000.00
+      amount: 10_000n,
       currency: 'USD',
       reference: 'Initial deposit for aUser',
       description: 'Funding aUser account',
     });
+    console.log('Deposited initial funds to aUser with $10,000.00 USD');
+
+    const aUserBalanceAfterDeposit = await container.accountService.getUserBalance(
+      aUser.account.id
+    );
+    console.log(`aUser Balance after deposit: ${aUserBalanceAfterDeposit} USD`);
+
+    const bUserBalanceInitial = await container.accountService.getUserBalance(
+      bUser.account.id
+    );
+    console.log(`bUser Balance: ${bUserBalanceInitial} USD`);
 
     // Transfer funds from aUser to bUser
     await container.transactionService.transfer({
       senderAccountId: aUser.account.id,
       receiverAccountId: bUser.account.id,
-      amount: 250_000n, // $2,500.00
+      amount: 2500n, // $2,500.00
       currency: 'USD',
       reference: 'Transfer from aUser to bUser',
       description: 'Payment for services',
     });
 
+    console.log('Transferred $2,500.00 USD from aUser to bUser');
+
     // Withdraw funds from bUser
     await container.transactionService.withdraw({
       accountId: bUser.account.id,
-      amount: 100_000n, // $1,000.00
+      amount: 1000n, // $1,000.00
       currency: 'USD',
       reference: 'Withdrawal by bUser',
       description: 'Withdrawing funds',

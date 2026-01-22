@@ -6,7 +6,7 @@ import {
 } from '../../services/account/LedgerAccountStore';
 import { UUID } from '../../domain/common/Types';
 import { LedgerAccountEntity } from '../entities/LedgerAccountEntity';
-import { LedgerAccountStatus, LedgerAccountType } from 'stores/entities';
+import { LedgerAccountStatus, LedgerAccountType } from '../entities/enums';
 
 /**
  * TypeORM implementation of LedgerAccountStore.

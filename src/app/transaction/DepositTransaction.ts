@@ -6,7 +6,7 @@ import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
 import { CreateTransactionInput, TransactionStore } from '../../services/transaction/TransactionStore';
 import { InvalidTransactionError } from '../../domain/common/DomainErrors';
-import { LedgerAccountType, TransactionType } from 'stores';
+import { LedgerAccountType, TransactionType } from '../../stores/entities/enums';
 import { LedgerAccountStore } from '../../services/account/LedgerAccountStore';
 
 /**

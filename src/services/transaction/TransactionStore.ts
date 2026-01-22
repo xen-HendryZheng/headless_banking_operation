@@ -1,6 +1,6 @@
 import { QueryRunner } from 'typeorm';
 import { UUID, Currency, TxType, TxStatus } from '../../domain/common/Types';
-import { TransactionType } from 'stores';
+import { TransactionType } from '../../stores/entities/enums';
 
 /**
  * Transaction header record.
