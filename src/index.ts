@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { AppDataSource } from './stores/data-source';
 import { createContainer, Container } from './bootstrap/container';
+import { formatCents } from './domain/common/Currency';
 
 /**
  * Application entry point.
@@ -33,54 +34,56 @@ async function main(): Promise<Container> {
       currency: 'USD',
     });
 
-    // Deposit initial funds to aUser
+    // Deposit initial funds to aUser ($100.00 = 10000 cents)
+    const depositAmount = 10000n;
     await container.transactionService.deposit({
       accountId: aUser.account.id,
-      amount: 10_000n,
+      amount: depositAmount,
       currency: 'USD',
       reference: 'Initial deposit for aUser',
       description: 'Funding aUser account',
     });
-    console.log('Deposited initial funds to aUser with $10,000.00 USD');
+    console.log(`Deposited ${formatCents(depositAmount)} USD to aUser`);
 
-    const aUserBalanceAfterDeposit = await container.accountService.getUserBalance(
+    const aUserBalanceAfterDeposit = await container.accountService.getUserBalanceFormatted(
       aUser.account.id
     );
     console.log(`aUser Balance after deposit: ${aUserBalanceAfterDeposit} USD`);
 
-    const bUserBalanceInitial = await container.accountService.getUserBalance(
+    const bUserBalanceInitial = await container.accountService.getUserBalanceFormatted(
       bUser.account.id
     );
     console.log(`bUser Balance: ${bUserBalanceInitial} USD`);
 
-    // Transfer funds from aUser to bUser
+    // Transfer funds from aUser to bUser ($25.00 = 2500 cents)
+    const transferAmount = 2500n;
     await container.transactionService.transfer({
       senderAccountId: aUser.account.id,
       receiverAccountId: bUser.account.id,
-      amount: 2500n, // $2,500.00
+      amount: transferAmount,
       currency: 'USD',
       reference: 'Transfer from aUser to bUser',
       description: 'Payment for services',
     });
+    console.log(`Transferred ${formatCents(transferAmount)} USD from aUser to bUser`);
 
-    console.log('Transferred $2,500.00 USD from aUser to bUser');
-
-    // Withdraw funds from bUser
+    // Withdraw funds from bUser ($10.00 = 1000 cents)
+    const withdrawAmount = 1000n;
     await container.transactionService.withdraw({
       accountId: bUser.account.id,
-      amount: 1000n, // $1,000.00
+      amount: withdrawAmount,
       currency: 'USD',
       reference: 'Withdrawal by bUser',
       description: 'Withdrawing funds',
     });
-    console.log('Withdrew $1,000.00 USD from bUser');
+    console.log(`Withdrew ${formatCents(withdrawAmount)} USD from bUser`);
 
-    const aUserBalance = await container.accountService.getUserBalance(
+    const aUserBalance = await container.accountService.getUserBalanceFormatted(
       aUser.account.id
     );
     console.log(`aUser Balance: ${aUserBalance} USD`);
 
-    const bUserBalance = await container.accountService.getUserBalance(
+    const bUserBalance = await container.accountService.getUserBalanceFormatted(
       bUser.account.id
     );
     console.log(`bUser Balance: ${bUserBalance} USD`);

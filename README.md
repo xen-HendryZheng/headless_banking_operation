@@ -77,6 +77,19 @@ tests/
 └── integration/               # Integration tests with real database
 ```
 
+## Amounts
+
+All monetary amounts are stored as `bigint` in **cents** (smallest currency unit):
+
+| Amount | Cents (bigint) |
+|--------|----------------|
+| $1.00  | `100n`         |
+| $10.00 | `1000n`        |
+| $100.00| `10000n`       |
+| $1,000.00 | `100000n`   |
+
+This avoids floating-point precision issues when dealing with currency.
+
 ## Main Classes
 
 ### TransactionService
@@ -88,28 +101,28 @@ import { createContainer } from './bootstrap/container';
 
 const container = await createContainer(dataSource);
 
-// Deposit funds
+// Deposit $100.00 (10000 cents)
 await container.transactionService.deposit({
   accountId: 'user-uuid',
-  amount: 10000n,        // $10,000
+  amount: 10000n,
   currency: 'USD',
   reference: 'DEP-001',
   description: 'Initial deposit',
 });
 
-// Withdraw funds
+// Withdraw $50.00 (5000 cents)
 await container.transactionService.withdraw({
   accountId: 'user-uuid',
-  amount: 5000n,         // $5,000
+  amount: 5000n,
   currency: 'USD',
   reference: 'WTH-001',
 });
 
-// Transfer between accounts
+// Transfer $25.00 (2500 cents)
 await container.transactionService.transfer({
   senderAccountId: 'sender-uuid',
   receiverAccountId: 'receiver-uuid',
-  amount: 2500n,         // $2,500
+  amount: 2500n,
   currency: 'USD',
   reference: 'TRF-001',
 });
@@ -206,6 +219,18 @@ npm run test:integration
 npm run test:coverage
 ```
 
+### Highlighted Tests
+
+Tests that verify core invariants:
+
+| Test | File | Line |
+|------|------|------|
+| Deposit creates 2 balanced ledger lines | [TransactionFlows.spec.ts](tests/integration/flows/TransactionFlows.spec.ts#L168) | 168 |
+| Withdraw rejects insufficient funds | [TransactionFlows.spec.ts](tests/integration/flows/TransactionFlows.spec.ts#L225) | 225 |
+| Concurrent transfers don't deadlock | [TransactionFlows.spec.ts](tests/integration/flows/TransactionFlows.spec.ts#L406) | 406 |
+| Ledger invariant: debits == credits | [LedgerRulesImpl.spec.ts](tests/unit/domain/ledger/LedgerRulesImpl.spec.ts#L30) | 30 |
+| Concurrent withdrawals prevent overdraft | [TransactionFlows.spec.ts](tests/integration/flows/TransactionFlows.spec.ts#L369) | 369 |
+
 ### Available Scripts
 
 | Script | Description |
@@ -255,7 +280,7 @@ async function main() {
     currency: 'USD',
   });
 
-  // Deposit $10,000 to Alice
+  // Deposit $100.00 to Alice (10000 cents)
   await container.transactionService.deposit({
     accountId: alice.account.id,
     amount: 10000n,
@@ -263,7 +288,7 @@ async function main() {
     reference: 'DEP-001',
   });
 
-  // Transfer $2,500 from Alice to Bob
+  // Transfer $25.00 from Alice to Bob (2500 cents)
   await container.transactionService.transfer({
     senderAccountId: alice.account.id,
     receiverAccountId: bob.account.id,
@@ -272,12 +297,12 @@ async function main() {
     reference: 'TRF-001',
   });
 
-  // Check balances
+  // Check balances (in cents)
   const aliceBalance = await container.accountService.getUserBalance(alice.account.id);
   const bobBalance = await container.accountService.getUserBalance(bob.account.id);
 
-  console.log(`Alice: ${aliceBalance}`);  // 7500 ($7,500)
-  console.log(`Bob: ${bobBalance}`);      // 2500 ($2,500)
+  console.log(`Alice: ${aliceBalance}`);  // 7500 cents ($75.00)
+  console.log(`Bob: ${bobBalance}`);      // 2500 cents ($25.00)
 }
 ```
 
@@ -291,13 +316,13 @@ bash-5.0$ npm run dev
 
 Database connection established
 Container initialized
-Deposited initial funds to aUser with $10,000.00 USD
-aUser Balance after deposit: 10000 USD
-bUser Balance: 0 USD
-Transferred $2,500.00 USD from aUser to bUser
-Withdrew $1,000.00 USD from bUser
-aUser Balance: 7500 USD
-bUser Balance: 1500 USD
+Deposited $100.00 USD to aUser
+aUser Balance after deposit: $100.00 USD
+bUser Balance: $0.00 USD
+Transferred $25.00 USD from aUser to bUser
+Withdrew $10.00 USD from bUser
+aUser Balance: $75.00 USD
+bUser Balance: $15.00 USD
 Initial setup completed
 ```
 
@@ -320,6 +345,22 @@ Initial setup completed
 - Database transactions with proper isolation
 - Sorted lock acquisition for transfers (deadlock prevention)
 - Pessimistic locking on balance updates
+
+## Failure Modes
+
+| Scenario | Behavior |
+|----------|----------|
+| Ledger posting fails mid-way | Full rollback - no partial commits. Transaction wraps all operations (header, ledger lines, balance update) in a single DB transaction. |
+| Concurrent withdrawals exceed balance | Only one succeeds. Pessimistic locking (`SELECT FOR UPDATE`) on balance ensures atomic check-and-update. Others receive `InsufficientBalanceError`. |
+| Concurrent transfers (A→B and B→A) | No deadlock. Accounts are locked in sorted UUID order, preventing circular wait conditions. |
+
+## Schema
+
+Tables are synced automatically from TypeORM entities:
+
+```bash
+npm run migration:schema:sync
+```
 
 ## Tech Stack
 

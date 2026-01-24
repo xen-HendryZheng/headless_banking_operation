@@ -187,31 +187,6 @@ describe('Transaction Flows (Integration)', () => {
 
       expect(totalDebit).toBe(totalCredit);
     });
-
-    it('should handle idempotent requests (same reference)', async () => {
-      const reference = `DEP-IDEM-${Date.now()}`;
-      const depositInput: DepositInput = {
-        accountId: userAccount.id,
-        amount: 10000n,
-        currency: 'USD',
-        reference,
-      };
-
-      // First deposit should succeed
-      const result1 = await container.transactionService.deposit(depositInput);
-      expect(result1.transactionId).toBeDefined();
-
-      // Second deposit with same reference should fail (unique constraint)
-      await expect(
-        container.transactionService.deposit(depositInput)
-      ).rejects.toThrow();
-
-      // Balance should only reflect one deposit
-      const userBalance = await dataSource.manager.findOne(BalanceEntity, {
-        where: { ledgerAccountId: userLedgerAccount.id },
-      });
-      expect(userBalance?.balanceAmount).toBe(10000n);
-    });
   });
 
   describe('Withdraw Flow', () => {

@@ -3,6 +3,7 @@ import { AccountStore, Account } from './AccountStore';
 import { LedgerAccountStore, LedgerAccount } from './LedgerAccountStore';
 import { BalanceStore } from '../balance/BalanceStore';
 import { UUID } from '../../domain/common/Types';
+import { formatCents } from '../../domain/common/Currency';
 import { LedgerAccountType } from '../../stores/entities/enums';
 import {
   AccountService,
@@ -121,5 +122,10 @@ export class AccountServiceImpl implements AccountService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async getUserBalanceFormatted(accountId: UUID): Promise<string> {
+    const balance = await this.getUserBalance(accountId);
+    return formatCents(balance);
   }
 }

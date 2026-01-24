@@ -41,7 +41,12 @@ export interface AccountService {
   getLedgerAccounts(accountId: UUID): Promise<LedgerAccount[]>;
 
   /**
-   * Get user balance for a given account.
+   * Get user balance for a given account (in cents).
    */
   getUserBalance(accountId: UUID): Promise<bigint>;
+
+  /**
+   * Get user balance formatted as currency string (e.g., "$100.00").
+   */
+  getUserBalanceFormatted(accountId: UUID): Promise<string>;
 }

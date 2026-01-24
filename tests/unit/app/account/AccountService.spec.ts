@@ -221,4 +221,62 @@ describe('AccountService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('getUserBalance', () => {
+    it('should return balance in cents', async () => {
+      mockLedgerAccountStore.findByAccountIdAndType.mockResolvedValue(mockLedgerAccount);
+      mockBalanceStore.getBalance.mockResolvedValue({
+        ledgerAccountId: mockLedgerAccount.id,
+        balanceAmount: 10000n, // $100.00 in cents
+        lastSequence: 1,
+        updatedAt: new Date(),
+      });
+
+      const result = await accountService.getUserBalance('account-123');
+
+      expect(result).toBe(10000n);
+    });
+
+    it('should return 0n when no balance record exists', async () => {
+      mockLedgerAccountStore.findByAccountIdAndType.mockResolvedValue(mockLedgerAccount);
+      mockBalanceStore.getBalance.mockResolvedValue(null);
+
+      const result = await accountService.getUserBalance('account-123');
+
+      expect(result).toBe(0n);
+    });
+
+    it('should throw error when user cash ledger account not found', async () => {
+      mockLedgerAccountStore.findByAccountIdAndType.mockResolvedValue(null);
+
+      await expect(accountService.getUserBalance('account-123')).rejects.toThrow(
+        'User cash ledger account not found'
+      );
+    });
+  });
+
+  describe('getUserBalanceFormatted', () => {
+    it('should return formatted balance string', async () => {
+      mockLedgerAccountStore.findByAccountIdAndType.mockResolvedValue(mockLedgerAccount);
+      mockBalanceStore.getBalance.mockResolvedValue({
+        ledgerAccountId: mockLedgerAccount.id,
+        balanceAmount: 10000n, // $100.00 in cents
+        lastSequence: 1,
+        updatedAt: new Date(),
+      });
+
+      const result = await accountService.getUserBalanceFormatted('account-123');
+
+      expect(result).toBe('$100.00');
+    });
+
+    it('should return $0.00 when no balance', async () => {
+      mockLedgerAccountStore.findByAccountIdAndType.mockResolvedValue(mockLedgerAccount);
+      mockBalanceStore.getBalance.mockResolvedValue(null);
+
+      const result = await accountService.getUserBalanceFormatted('account-123');
+
+      expect(result).toBe('$0.00');
+    });
+  });
 });
