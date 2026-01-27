@@ -61,7 +61,7 @@ export class AccountServiceImpl implements AccountService {
       await this.balanceStore.insert(
         ledgerAccount.id,
         BigInt(0),
-        0,
+        0n,
         queryRunner
       );
 

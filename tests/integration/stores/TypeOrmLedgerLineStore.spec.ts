@@ -117,7 +117,7 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 10000n,
           amount: 10000n,
-          sequence: 1,
+          sequence: 1n,
         },
         {
           transactionId: testTransaction.id,
@@ -126,7 +126,7 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 10000n,
           credit: 0n,
           amount: 10000n,
-          sequence: 1,
+          sequence: 1n,
         },
       ];
 
@@ -146,7 +146,7 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 5000n,
           amount: 5000n,
-          sequence: 1,
+          sequence: 1n,
         },
       ];
 
@@ -169,7 +169,7 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 1000n,
           amount: 1000n,
-          sequence: 5,
+          sequence: 5n,
         },
         {
           transactionId: testTransaction.id,
@@ -178,15 +178,15 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 1000n,
           credit: 0n,
           amount: 1000n,
-          sequence: 3,
+          sequence: 3n,
         },
       ];
 
       const result = await ledgerLineStore.insert(lines, queryRunner);
 
       const linesByAccount = new Map(result.map((l) => [l.ledgerAccountId, l]));
-      expect(linesByAccount.get(testLedgerAccount1.id)?.sequence).toBe(5);
-      expect(linesByAccount.get(testLedgerAccount2.id)?.sequence).toBe(3);
+      expect(linesByAccount.get(testLedgerAccount1.id)?.sequence).toBe(5n);
+      expect(linesByAccount.get(testLedgerAccount2.id)?.sequence).toBe(3n);
     });
   });
 
@@ -201,7 +201,7 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 10000n,
           amount: 10000n,
-          sequence: 1,
+          sequence: 1n,
         },
         {
           transactionId: testTransaction.id,
@@ -210,7 +210,7 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 10000n,
           credit: 0n,
           amount: 10000n,
-          sequence: 1,
+          sequence: 1n,
         },
       ];
 
@@ -260,7 +260,7 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 10000n,
           amount: 10000n,
-          sequence: 1,
+          sequence: 1n,
         },
         {
           transactionId: testTransaction2.id,
@@ -269,7 +269,7 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 5000n,
           amount: 5000n,
-          sequence: 2,
+          sequence: 2n,
         },
       ];
 
@@ -321,7 +321,7 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 5000n,
           amount: 5000n,
-          sequence: 3, // Middle sequence
+          sequence: 3n, // Middle sequence
         },
         {
           transactionId: testTransaction.id,
@@ -330,7 +330,7 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 10000n,
           amount: 10000n,
-          sequence: 1, // First sequence
+          sequence: 1n, // First sequence
         },
         {
           transactionId: testTransaction3.id,
@@ -339,7 +339,7 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
           debit: 0n,
           credit: 3000n,
           amount: 3000n,
-          sequence: 5, // Last sequence
+          sequence: 5n, // Last sequence
         },
       ];
 
@@ -351,9 +351,9 @@ describe('TypeOrmLedgerLineStore (Integration)', () => {
       );
 
       expect(result).toHaveLength(3);
-      expect(result[0].sequence).toBe(1);
-      expect(result[1].sequence).toBe(3);
-      expect(result[2].sequence).toBe(5);
+      expect(result[0].sequence).toBe(1n);
+      expect(result[1].sequence).toBe(3n);
+      expect(result[2].sequence).toBe(5n);
     });
 
     it('should return empty array when no lines found', async () => {

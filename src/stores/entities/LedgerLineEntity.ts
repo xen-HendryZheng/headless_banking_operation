@@ -36,8 +36,8 @@ export class LedgerLineEntity {
   @Column({ type: 'bigint', transformer: new BigIntTransformer() })
   amount!: bigint;
 
-  @Column({ type: 'integer' })
-  sequence!: number;
+  @Column({ type: 'bigint', transformer: new BigIntTransformer() })
+  sequence!: bigint;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

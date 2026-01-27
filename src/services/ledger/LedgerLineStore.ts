@@ -12,7 +12,7 @@ export interface LedgerLineInsert {
   debit: bigint;
   credit: bigint;
   amount: bigint;
-  sequence: number;
+  sequence: bigint;
 }
 
 /**

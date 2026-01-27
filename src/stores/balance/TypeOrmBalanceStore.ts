@@ -64,7 +64,7 @@ export class TypeOrmBalanceStore implements BalanceStore {
   async upsert(
     ledgerAccountId: UUID,
     newBalance: bigint,
-    newSequence: number,
+    newSequence: bigint,
     queryRunner: QueryRunner
   ): Promise<BalanceRecord> {
     const existing = await this.lockAndGet(ledgerAccountId, queryRunner);
@@ -77,7 +77,7 @@ export class TypeOrmBalanceStore implements BalanceStore {
   async insert(
     ledgerAccountId: UUID,
     balanceAmount: bigint,
-    sequence: number,
+    sequence: bigint,
     queryRunner: QueryRunner
   ): Promise<BalanceRecord> {
     const balanceEntity = new BalanceEntity();
@@ -98,7 +98,7 @@ export class TypeOrmBalanceStore implements BalanceStore {
   async updateBalance(
     ledgerAccountId: UUID,
     newBalance: bigint,
-    newSequence: number,
+    newSequence: bigint,
     queryRunner: QueryRunner
   ): Promise<BalanceRecord> {
     const result = await queryRunner.manager
@@ -118,7 +118,7 @@ export class TypeOrmBalanceStore implements BalanceStore {
     return {
       ledgerAccountId: raw.ledger_account_id,
       balanceAmount: BigInt(raw.balance_amount),
-      lastSequence: raw.last_sequence,
+      lastSequence: BigInt(raw.last_sequence),
       updatedAt: raw.updated_at,
     };
   }

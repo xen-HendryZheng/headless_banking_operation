@@ -36,7 +36,7 @@ describe('TransferTransaction', () => {
     ledgerAccountId: string,
     debit: bigint,
     credit: bigint,
-    sequence: number
+    sequence: bigint
   ): LedgerLine => ({
     id: `line-${ledgerAccountId}`,
     transactionId: 'tx-123',
@@ -76,8 +76,8 @@ describe('TransferTransaction', () => {
       apply: jest.fn(),
       getBalance: jest.fn(),
       getBalances: jest.fn().mockResolvedValue([
-        { ledgerAccountId: receiverLedgerAccountId, balanceAmount: 0n, lastSequence: 0, updatedAt: new Date() },
-        { ledgerAccountId: senderLedgerAccountId, balanceAmount: 10000n, lastSequence: 0, updatedAt: new Date() },
+        { ledgerAccountId: receiverLedgerAccountId, balanceAmount: 0n, lastSequence: 0n, updatedAt: new Date() },
+        { ledgerAccountId: senderLedgerAccountId, balanceAmount: 10000n, lastSequence: 0n, updatedAt: new Date() },
       ]),
     };
 
@@ -139,13 +139,13 @@ describe('TransferTransaction', () => {
       };
 
       const ledgerLines: LedgerLine[] = [
-        createLedgerLine(senderLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(receiverLedgerAccountId, 0n, validInput.amount, 1),
+        createLedgerLine(senderLedgerAccountId, validInput.amount, 0n, 1n),
+        createLedgerLine(receiverLedgerAccountId, 0n, validInput.amount, 1n),
       ];
 
       const balanceRecords: BalanceRecord[] = [
-        { ledgerAccountId: senderLedgerAccountId, balanceAmount: 7500n, lastSequence: 1, updatedAt: new Date() },
-        { ledgerAccountId: receiverLedgerAccountId, balanceAmount: 2500n, lastSequence: 1, updatedAt: new Date() },
+        { ledgerAccountId: senderLedgerAccountId, balanceAmount: 7500n, lastSequence: 1n, updatedAt: new Date() },
+        { ledgerAccountId: receiverLedgerAccountId, balanceAmount: 2500n, lastSequence: 1n, updatedAt: new Date() },
       ];
 
       mockTransactionStore.createHeader.mockResolvedValue(txHeader);
@@ -182,8 +182,8 @@ describe('TransferTransaction', () => {
 
     it('should throw InsufficientBalanceError when sender has insufficient balance', async () => {
       mockBalanceService.getBalances.mockResolvedValue([
-        { ledgerAccountId: receiverLedgerAccountId, balanceAmount: 0n, lastSequence: 0, updatedAt: new Date() },
-        { ledgerAccountId: senderLedgerAccountId, balanceAmount: 1000n, lastSequence: 0, updatedAt: new Date() },
+        { ledgerAccountId: receiverLedgerAccountId, balanceAmount: 0n, lastSequence: 0n, updatedAt: new Date() },
+        { ledgerAccountId: senderLedgerAccountId, balanceAmount: 1000n, lastSequence: 0n, updatedAt: new Date() },
       ]);
 
       await expect(transferTransaction.execute(validInput)).rejects.toThrow(InsufficientBalanceError);
@@ -208,8 +208,8 @@ describe('TransferTransaction', () => {
 
       mockTransactionStore.createHeader.mockResolvedValue(txHeader);
       mockLedgerService.post.mockResolvedValue([
-        createLedgerLine(senderLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(receiverLedgerAccountId, 0n, validInput.amount, 1),
+        createLedgerLine(senderLedgerAccountId, validInput.amount, 0n, 1n),
+        createLedgerLine(receiverLedgerAccountId, 0n, validInput.amount, 1n),
       ]);
       mockBalanceService.apply.mockResolvedValue([]);
 
@@ -255,8 +255,8 @@ describe('TransferTransaction', () => {
       };
 
       const ledgerLines: LedgerLine[] = [
-        createLedgerLine(senderLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(receiverLedgerAccountId, 0n, validInput.amount, 1),
+        createLedgerLine(senderLedgerAccountId, validInput.amount, 0n, 1n),
+        createLedgerLine(receiverLedgerAccountId, 0n, validInput.amount, 1n),
       ];
 
       mockTransactionStore.createHeader.mockResolvedValue(txHeader);

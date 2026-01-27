@@ -15,7 +15,7 @@ describe('BalanceServiceImpl', () => {
   const createBalanceRecord = (
     ledgerAccountId: string,
     balanceAmount: bigint,
-    lastSequence: number
+    lastSequence: bigint
   ): BalanceRecord => ({
     ledgerAccountId,
     balanceAmount,
@@ -45,13 +45,13 @@ describe('BalanceServiceImpl', () => {
   describe('apply', () => {
     it('should lock balances for all affected ledger accounts', async () => {
       const deltas: BalanceDelta[] = [
-        { ledgerAccountId: 'ledger-1', delta: 1000n, newSequence: 1 },
-        { ledgerAccountId: 'ledger-2', delta: -1000n, newSequence: 1 },
+        { ledgerAccountId: 'ledger-1', delta: 1000n, newSequence: 1n },
+        { ledgerAccountId: 'ledger-2', delta: -1000n, newSequence: 1n },
       ];
 
       mockBalanceStore.lockAndGetMany.mockResolvedValue([
-        createBalanceRecord('ledger-1', 0n, 0),
-        createBalanceRecord('ledger-2', 5000n, 0),
+        createBalanceRecord('ledger-1', 0n, 0n),
+        createBalanceRecord('ledger-2', 5000n, 0n),
       ]);
 
       mockBalanceStore.updateBalance.mockImplementation(async (id, balance, seq) =>
@@ -68,11 +68,11 @@ describe('BalanceServiceImpl', () => {
 
     it('should validate no-negative constraint for each delta', async () => {
       const deltas: BalanceDelta[] = [
-        { ledgerAccountId: 'ledger-1', delta: -500n, newSequence: 1 },
+        { ledgerAccountId: 'ledger-1', delta: -500n, newSequence: 1n },
       ];
 
       mockBalanceStore.lockAndGetMany.mockResolvedValue([
-        createBalanceRecord('ledger-1', 1000n, 0),
+        createBalanceRecord('ledger-1', 1000n, 0n),
       ]);
 
       mockBalanceStore.updateBalance.mockImplementation(async (id, balance, seq) =>
@@ -86,15 +86,15 @@ describe('BalanceServiceImpl', () => {
 
     it('should update balances via balanceStore', async () => {
       const deltas: BalanceDelta[] = [
-        { ledgerAccountId: 'ledger-1', delta: 1000n, newSequence: 5 },
+        { ledgerAccountId: 'ledger-1', delta: 1000n, newSequence: 5n },
       ];
 
       mockBalanceStore.lockAndGetMany.mockResolvedValue([
-        createBalanceRecord('ledger-1', 500n, 4),
+        createBalanceRecord('ledger-1', 500n, 4n),
       ]);
 
       mockBalanceStore.updateBalance.mockResolvedValue(
-        createBalanceRecord('ledger-1', 1500n, 5)
+        createBalanceRecord('ledger-1', 1500n, 5n)
       );
 
       await balanceService.apply(deltas, mockQueryRunner);
@@ -102,25 +102,25 @@ describe('BalanceServiceImpl', () => {
       expect(mockBalanceStore.updateBalance).toHaveBeenCalledWith(
         'ledger-1',
         1500n, // 500 + 1000
-        5,
+        5n,
         mockQueryRunner
       );
     });
 
     it('should return updated balance records', async () => {
       const deltas: BalanceDelta[] = [
-        { ledgerAccountId: 'ledger-1', delta: 1000n, newSequence: 1 },
-        { ledgerAccountId: 'ledger-2', delta: 500n, newSequence: 1 },
+        { ledgerAccountId: 'ledger-1', delta: 1000n, newSequence: 1n },
+        { ledgerAccountId: 'ledger-2', delta: 500n, newSequence: 1n },
       ];
 
       mockBalanceStore.lockAndGetMany.mockResolvedValue([
-        createBalanceRecord('ledger-1', 0n, 0),
-        createBalanceRecord('ledger-2', 100n, 0),
+        createBalanceRecord('ledger-1', 0n, 0n),
+        createBalanceRecord('ledger-2', 100n, 0n),
       ]);
 
       mockBalanceStore.updateBalance
-        .mockResolvedValueOnce(createBalanceRecord('ledger-1', 1000n, 1))
-        .mockResolvedValueOnce(createBalanceRecord('ledger-2', 600n, 1));
+        .mockResolvedValueOnce(createBalanceRecord('ledger-1', 1000n, 1n))
+        .mockResolvedValueOnce(createBalanceRecord('ledger-2', 600n, 1n));
 
       const result = await balanceService.apply(deltas, mockQueryRunner);
 
@@ -131,11 +131,11 @@ describe('BalanceServiceImpl', () => {
 
     it('should throw InsufficientBalanceError when balance would go negative', async () => {
       const deltas: BalanceDelta[] = [
-        { ledgerAccountId: 'ledger-1', delta: -2000n, newSequence: 1 },
+        { ledgerAccountId: 'ledger-1', delta: -2000n, newSequence: 1n },
       ];
 
       mockBalanceStore.lockAndGetMany.mockResolvedValue([
-        createBalanceRecord('ledger-1', 1000n, 0),
+        createBalanceRecord('ledger-1', 1000n, 0n),
       ]);
 
       mockBalanceRules.assertNoNegative.mockImplementation(() => {
@@ -151,15 +151,15 @@ describe('BalanceServiceImpl', () => {
 
     it('should sort ledger account IDs to prevent deadlocks', async () => {
       const deltas: BalanceDelta[] = [
-        { ledgerAccountId: 'ledger-z', delta: 100n, newSequence: 1 },
-        { ledgerAccountId: 'ledger-a', delta: 100n, newSequence: 1 },
-        { ledgerAccountId: 'ledger-m', delta: 100n, newSequence: 1 },
+        { ledgerAccountId: 'ledger-z', delta: 100n, newSequence: 1n },
+        { ledgerAccountId: 'ledger-a', delta: 100n, newSequence: 1n },
+        { ledgerAccountId: 'ledger-m', delta: 100n, newSequence: 1n },
       ];
 
       mockBalanceStore.lockAndGetMany.mockResolvedValue([
-        createBalanceRecord('ledger-a', 0n, 0),
-        createBalanceRecord('ledger-m', 0n, 0),
-        createBalanceRecord('ledger-z', 0n, 0),
+        createBalanceRecord('ledger-a', 0n, 0n),
+        createBalanceRecord('ledger-m', 0n, 0n),
+        createBalanceRecord('ledger-z', 0n, 0n),
       ]);
 
       mockBalanceStore.updateBalance.mockImplementation(async (id, balance, seq) =>
@@ -176,21 +176,21 @@ describe('BalanceServiceImpl', () => {
 
     it('should handle new ledger accounts (no existing balance)', async () => {
       const deltas: BalanceDelta[] = [
-        { ledgerAccountId: 'new-ledger', delta: 1000n, newSequence: 1 },
+        { ledgerAccountId: 'new-ledger', delta: 1000n, newSequence: 1n },
       ];
 
       // No existing balance - returns empty
       mockBalanceStore.lockAndGetMany.mockResolvedValue([]);
 
       mockBalanceStore.insert.mockResolvedValue(
-        createBalanceRecord('new-ledger', 1000n, 1)
+        createBalanceRecord('new-ledger', 1000n, 1n)
       );
 
       const result = await balanceService.apply(deltas, mockQueryRunner);
 
       // Should treat missing balance as 0 and use insert instead of updateBalance
       expect(mockBalanceRules.assertNoNegative).toHaveBeenCalledWith(0n, 1000n);
-      expect(mockBalanceStore.insert).toHaveBeenCalledWith('new-ledger', 1000n, 1, mockQueryRunner);
+      expect(mockBalanceStore.insert).toHaveBeenCalledWith('new-ledger', 1000n, 1n, mockQueryRunner);
       expect(result).toHaveLength(1);
       expect(result[0].balanceAmount).toBe(1000n);
     });
@@ -205,7 +205,7 @@ describe('BalanceServiceImpl', () => {
 
   describe('getBalance', () => {
     it('should return balance record for existing ledger account', async () => {
-      const expectedBalance = createBalanceRecord('ledger-1', 5000n, 10);
+      const expectedBalance = createBalanceRecord('ledger-1', 5000n, 10n);
       mockBalanceStore.lockAndGet.mockResolvedValue(expectedBalance);
 
       const result = await balanceService.getBalance('ledger-1', mockQueryRunner);
@@ -226,8 +226,8 @@ describe('BalanceServiceImpl', () => {
   describe('getBalances', () => {
     it('should return balance records for multiple ledger accounts', async () => {
       const balances = [
-        createBalanceRecord('ledger-1', 1000n, 5),
-        createBalanceRecord('ledger-2', 2000n, 3),
+        createBalanceRecord('ledger-1', 1000n, 5n),
+        createBalanceRecord('ledger-2', 2000n, 3n),
       ];
       mockBalanceStore.lockAndGetMany.mockResolvedValue(balances);
 
@@ -252,7 +252,7 @@ describe('BalanceServiceImpl', () => {
     });
 
     it('should return partial results when some accounts exist', async () => {
-      const balances = [createBalanceRecord('ledger-1', 1000n, 5)];
+      const balances = [createBalanceRecord('ledger-1', 1000n, 5n)];
       mockBalanceStore.lockAndGetMany.mockResolvedValue(balances);
 
       const result = await balanceService.getBalances(

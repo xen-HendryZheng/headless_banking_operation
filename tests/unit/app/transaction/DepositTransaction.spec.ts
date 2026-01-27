@@ -35,7 +35,7 @@ describe('DepositTransaction', () => {
     ledgerAccountId: string,
     debit: bigint,
     credit: bigint,
-    sequence: number
+    sequence: bigint
   ): LedgerLine => ({
     id: `line-${ledgerAccountId}`,
     transactionId: 'tx-123',
@@ -157,12 +157,12 @@ describe('DepositTransaction', () => {
       };
 
       const ledgerLines: LedgerLine[] = [
-        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1),
+        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1n),
+        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1n),
       ];
 
       const balanceRecords: BalanceRecord[] = [
-        { ledgerAccountId: userLedgerAccountId, balanceAmount: 10000n, lastSequence: 1, updatedAt: new Date() },
+        { ledgerAccountId: userLedgerAccountId, balanceAmount: 10000n, lastSequence: 1n, updatedAt: new Date() },
       ];
 
       mockTransactionStore.createHeader.mockResolvedValue(txHeader);
@@ -217,8 +217,8 @@ describe('DepositTransaction', () => {
 
       mockTransactionStore.createHeader.mockResolvedValue(txHeader);
       mockLedgerService.post.mockResolvedValue([
-        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1),
+        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1n),
+        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1n),
       ]);
       mockBalanceService.apply.mockResolvedValue([]);
 
@@ -254,8 +254,8 @@ describe('DepositTransaction', () => {
 
       mockTransactionStore.createHeader.mockResolvedValue(txHeader);
       mockLedgerService.post.mockResolvedValue([
-        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1),
+        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1n),
+        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1n),
       ]);
       mockBalanceService.apply.mockResolvedValue([]);
 
@@ -301,8 +301,8 @@ describe('DepositTransaction', () => {
       };
 
       const ledgerLines: LedgerLine[] = [
-        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1),
-        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1),
+        createLedgerLine(bankLiabilityLedgerAccountId, validInput.amount, 0n, 1n),
+        createLedgerLine(userLedgerAccountId, 0n, validInput.amount, 1n),
       ];
 
       mockTransactionStore.createHeader.mockResolvedValue(txHeader);

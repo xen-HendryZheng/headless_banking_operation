@@ -14,5 +14,5 @@ export interface Sequencer {
    * @param queryRunner - TypeORM QueryRunner for transaction context
    * @returns The next sequence number
    */
-  getNextSequence(ledgerAccountId: UUID, queryRunner: QueryRunner): Promise<number>;
+  getNextSequence(ledgerAccountId: UUID, queryRunner: QueryRunner): Promise<bigint>;
 }

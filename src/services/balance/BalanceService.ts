@@ -7,7 +7,7 @@ import { UUID } from '../../domain/common/Types';
 export interface BalanceRecord {
   ledgerAccountId: UUID;
   balanceAmount: bigint;
-  lastSequence: number;
+  lastSequence: bigint;
   updatedAt: Date;
 }
 
@@ -17,7 +17,7 @@ export interface BalanceRecord {
 export interface BalanceDelta {
   ledgerAccountId: UUID;
   delta: bigint;
-  newSequence: number;
+  newSequence: bigint;
 }
 
 /**

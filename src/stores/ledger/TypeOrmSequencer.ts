@@ -4,20 +4,20 @@ import { UUID } from '../../domain/common/Types';
 
 /**
  * TypeORM implementation of Sequencer.
- * Allocates monotonically increasing sequences per ledger account.
+ * Uses timestamp-based sequences per ledger account.
  */
 export class TypeOrmSequencer implements Sequencer {
-  async getNextSequence(ledgerAccountId: UUID, queryRunner: QueryRunner): Promise<number> {
-    
-    const result = await queryRunner.manager
+  async getNextSequence(ledgerAccountId: UUID, queryRunner: QueryRunner): Promise<bigint> {
+    // Lock balance row for update to ensure atomic access
+    await queryRunner.manager
       .createQueryBuilder()
-      .select("balance.last_sequence", "last_sequence")
+      .select("balance.ledger_account_id")
       .from("balance", "balance")
       .where("balance.ledger_account_id = :ledgerAccountId", { ledgerAccountId })
-      .setLock("pessimistic_write") // Lock balance row for update
+      .setLock("pessimistic_write")
       .getRawOne();
 
-    // If balance exists, return last_sequence + 1, otherwise return 1 (first transaction)
-    return result ? result.last_sequence + 1 : 1;
+    const timestampSequence = BigInt(Date.now());
+    return timestampSequence;
   }
 }

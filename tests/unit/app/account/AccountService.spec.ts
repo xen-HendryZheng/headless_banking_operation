@@ -52,7 +52,7 @@ describe('AccountService', () => {
   const mockBalanceRecord: BalanceRecord = {
     ledgerAccountId: 'ledger-account-123',
     balanceAmount: 0n,
-    lastSequence: 0,
+    lastSequence: 0n,
     updatedAt: new Date(),
   };
 
@@ -137,7 +137,7 @@ describe('AccountService', () => {
       expect(mockBalanceStore.insert).toHaveBeenCalledWith(
         mockLedgerAccount.id,
         0n,
-        0,
+        0n,
         mockQueryRunner
       );
 
@@ -228,7 +228,7 @@ describe('AccountService', () => {
       mockBalanceStore.getBalance.mockResolvedValue({
         ledgerAccountId: mockLedgerAccount.id,
         balanceAmount: 10000n, // $100.00 in cents
-        lastSequence: 1,
+        lastSequence: 1n,
         updatedAt: new Date(),
       });
 
@@ -261,7 +261,7 @@ describe('AccountService', () => {
       mockBalanceStore.getBalance.mockResolvedValue({
         ledgerAccountId: mockLedgerAccount.id,
         balanceAmount: 10000n, // $100.00 in cents
-        lastSequence: 1,
+        lastSequence: 1n,
         updatedAt: new Date(),
       });
 

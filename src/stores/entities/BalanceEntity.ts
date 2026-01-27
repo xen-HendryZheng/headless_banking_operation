@@ -17,8 +17,8 @@ export class BalanceEntity {
   @Column({ name: 'balance_amount', type: 'bigint', default: 0, transformer: new BigIntTransformer() })
   balanceAmount!: bigint;
 
-  @Column({ name: 'last_sequence', type: 'integer', default: 0 })
-  lastSequence!: number;
+  @Column({ name: 'last_sequence', type: 'bigint', default: 0, transformer: new BigIntTransformer() })
+  lastSequence!: bigint;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;

@@ -35,7 +35,7 @@ describe('WithdrawTransaction', () => {
     ledgerAccountId: string,
     debit: bigint,
     credit: bigint,
-    sequence: number
+    sequence: bigint
   ): LedgerLine => ({
     id: `line-${ledgerAccountId}`,
     transactionId: 'tx-123',
@@ -76,7 +76,7 @@ describe('WithdrawTransaction', () => {
       getBalance: jest.fn().mockResolvedValue({
         ledgerAccountId: userLedgerAccountId,
         balanceAmount: 10000n,
-        lastSequence: 0,
+        lastSequence: 0n,
         updatedAt: new Date()
       }),
       getBalances: jest.fn(),
@@ -138,8 +138,8 @@ describe('WithdrawTransaction', () => {
       };
 
       const ledgerLines: LedgerLine[] = [
-        createLedgerLine(bankLiabilityLedgerAccountId, 0n, validInput.amount, 1),
-        createLedgerLine(userLedgerAccountId, validInput.amount, 0n, 1),
+        createLedgerLine(bankLiabilityLedgerAccountId, 0n, validInput.amount, 1n),
+        createLedgerLine(userLedgerAccountId, validInput.amount, 0n, 1n),
       ];
 
       mockTransactionStore.createHeader.mockResolvedValue(txHeader);
@@ -167,7 +167,7 @@ describe('WithdrawTransaction', () => {
       mockBalanceService.getBalance.mockResolvedValue({
         ledgerAccountId: userLedgerAccountId,
         balanceAmount: 1000n,
-        lastSequence: 0,
+        lastSequence: 0n,
         updatedAt: new Date()
       });
 
@@ -198,8 +198,8 @@ describe('WithdrawTransaction', () => {
       };
 
       const ledgerLines: LedgerLine[] = [
-        createLedgerLine(bankLiabilityLedgerAccountId, 0n, validInput.amount, 1),
-        createLedgerLine(userLedgerAccountId, validInput.amount, 0n, 1),
+        createLedgerLine(bankLiabilityLedgerAccountId, 0n, validInput.amount, 1n),
+        createLedgerLine(userLedgerAccountId, validInput.amount, 0n, 1n),
       ];
 
       mockTransactionStore.createHeader.mockResolvedValue(txHeader);

@@ -36,6 +36,6 @@ export interface LedgerLine {
   debit: bigint;
   credit: bigint;
   amount: bigint;
-  sequence: number;
+  sequence: bigint;
   createdAt: Date;
 }

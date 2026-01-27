@@ -101,14 +101,14 @@ describe('TypeOrmBalanceStore (Integration)', () => {
   describe('lockAndGet', () => {
     it('should lock and return balance for existing ledger account', async () => {
       // First create a balance
-      await balanceStore.upsert(testLedgerAccount1.id, 5000n, 1, queryRunner);
+      await balanceStore.upsert(testLedgerAccount1.id, 5000n, 1n, queryRunner);
 
       const result = await balanceStore.lockAndGet(testLedgerAccount1.id, queryRunner);
 
       expect(result).not.toBeNull();
       expect(result!.ledgerAccountId).toBe(testLedgerAccount1.id);
       expect(result!.balanceAmount).toBe(5000n);
-      expect(result!.lastSequence).toBe(1);
+      expect(result!.lastSequence).toBe(1n);
     });
 
     it('should return null for non-existent ledger account', async () => {
@@ -122,7 +122,7 @@ describe('TypeOrmBalanceStore (Integration)', () => {
 
     it('should acquire row-level lock (FOR UPDATE)', async () => {
       // Create a balance
-      await balanceStore.upsert(testLedgerAccount1.id, 1000n, 1, queryRunner);
+      await balanceStore.upsert(testLedgerAccount1.id, 1000n, 1n, queryRunner);
 
       // Lock and get should work within the same transaction
       const result = await balanceStore.lockAndGet(testLedgerAccount1.id, queryRunner);
@@ -134,7 +134,7 @@ describe('TypeOrmBalanceStore (Integration)', () => {
       const updated = await balanceStore.updateBalance(
         testLedgerAccount1.id,
         2000n,
-        2,
+        2n,
         queryRunner
       );
       expect(updated.balanceAmount).toBe(2000n);
@@ -144,8 +144,8 @@ describe('TypeOrmBalanceStore (Integration)', () => {
   describe('lockAndGetMany', () => {
     it('should lock and return balances for multiple ledger accounts', async () => {
       // Create balances for multiple accounts
-      await balanceStore.upsert(testLedgerAccount1.id, 1000n, 1, queryRunner);
-      await balanceStore.upsert(testLedgerAccount2.id, 2000n, 2, queryRunner);
+      await balanceStore.upsert(testLedgerAccount1.id, 1000n, 1n, queryRunner);
+      await balanceStore.upsert(testLedgerAccount2.id, 2000n, 2n, queryRunner);
 
       const result = await balanceStore.lockAndGetMany(
         [testLedgerAccount1.id, testLedgerAccount2.id],
@@ -160,9 +160,9 @@ describe('TypeOrmBalanceStore (Integration)', () => {
 
     it('should return balances in consistent order', async () => {
       // Create balances
-      await balanceStore.upsert(testLedgerAccount1.id, 1000n, 1, queryRunner);
-      await balanceStore.upsert(testLedgerAccount2.id, 2000n, 1, queryRunner);
-      await balanceStore.upsert(testLedgerAccount3.id, 3000n, 1, queryRunner);
+      await balanceStore.upsert(testLedgerAccount1.id, 1000n, 1n, queryRunner);
+      await balanceStore.upsert(testLedgerAccount2.id, 2000n, 1n, queryRunner);
+      await balanceStore.upsert(testLedgerAccount3.id, 3000n, 1n, queryRunner);
 
       // Request in different orders - results should be sorted
       const result1 = await balanceStore.lockAndGetMany(
@@ -183,7 +183,7 @@ describe('TypeOrmBalanceStore (Integration)', () => {
 
     it('should handle mix of existing and non-existing accounts', async () => {
       // Only create balance for one account
-      await balanceStore.upsert(testLedgerAccount1.id, 1000n, 1, queryRunner);
+      await balanceStore.upsert(testLedgerAccount1.id, 1000n, 1n, queryRunner);
 
       const result = await balanceStore.lockAndGetMany(
         [testLedgerAccount1.id, '00000000-0000-0000-0000-000000000000'],
@@ -201,37 +201,37 @@ describe('TypeOrmBalanceStore (Integration)', () => {
       const result = await balanceStore.upsert(
         testLedgerAccount1.id,
         10000n,
-        1,
+        1n,
         queryRunner
       );
 
       expect(result.ledgerAccountId).toBe(testLedgerAccount1.id);
       expect(result.balanceAmount).toBe(10000n);
-      expect(result.lastSequence).toBe(1);
+      expect(result.lastSequence).toBe(1n);
       expect(result.updatedAt).toBeInstanceOf(Date);
     });
 
     it('should update existing balance record', async () => {
       // First insert
-      await balanceStore.upsert(testLedgerAccount1.id, 5000n, 1, queryRunner);
+      await balanceStore.upsert(testLedgerAccount1.id, 5000n, 1n, queryRunner);
 
       // Then update
       const result = await balanceStore.upsert(
         testLedgerAccount1.id,
         8000n,
-        2,
+        2n,
         queryRunner
       );
 
       expect(result.balanceAmount).toBe(8000n);
-      expect(result.lastSequence).toBe(2);
+      expect(result.lastSequence).toBe(2n);
     });
 
     it('should return the upserted balance record', async () => {
       const result = await balanceStore.upsert(
         testLedgerAccount2.id,
         15000n,
-        5,
+        5n,
         queryRunner
       );
 
@@ -239,7 +239,7 @@ describe('TypeOrmBalanceStore (Integration)', () => {
         expect.objectContaining({
           ledgerAccountId: testLedgerAccount2.id,
           balanceAmount: 15000n,
-          lastSequence: 5,
+          lastSequence: 5n,
         })
       );
     });
@@ -248,18 +248,18 @@ describe('TypeOrmBalanceStore (Integration)', () => {
   describe('updateBalance', () => {
     it('should update balance amount and sequence', async () => {
       // First create a balance
-      await balanceStore.upsert(testLedgerAccount1.id, 1000n, 1, queryRunner);
+      await balanceStore.upsert(testLedgerAccount1.id, 1000n, 1n, queryRunner);
 
       // Then update
       const result = await balanceStore.updateBalance(
         testLedgerAccount1.id,
         5000n,
-        3,
+        3n,
         queryRunner
       );
 
       expect(result.balanceAmount).toBe(5000n);
-      expect(result.lastSequence).toBe(3);
+      expect(result.lastSequence).toBe(3n);
     });
 
     it('should update the updated_at timestamp', async () => {
@@ -267,7 +267,7 @@ describe('TypeOrmBalanceStore (Integration)', () => {
       const initial = await balanceStore.upsert(
         testLedgerAccount1.id,
         1000n,
-        1,
+        1n,
         queryRunner
       );
       const initialUpdatedAt = initial.updatedAt;
@@ -279,7 +279,7 @@ describe('TypeOrmBalanceStore (Integration)', () => {
       const updated = await balanceStore.updateBalance(
         testLedgerAccount1.id,
         2000n,
-        2,
+        2n,
         queryRunner
       );
 

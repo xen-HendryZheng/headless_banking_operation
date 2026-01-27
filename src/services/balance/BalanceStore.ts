@@ -23,7 +23,7 @@ export interface BalanceStore {
   insert(
     ledgerAccountId: UUID,
     balanceAmount: bigint,
-    sequence: number,
+    sequence: bigint,
     queryRunner: QueryRunner
   ): Promise<BalanceRecord>;
 
@@ -33,7 +33,7 @@ export interface BalanceStore {
   updateBalance(
     ledgerAccountId: UUID,
     newBalance: bigint,
-    newSequence: number,
+    newSequence: bigint,
     queryRunner: QueryRunner
   ): Promise<BalanceRecord>;
 

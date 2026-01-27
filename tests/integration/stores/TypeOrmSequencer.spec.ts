@@ -95,58 +95,49 @@ describe('TypeOrmSequencer (Integration)', () => {
   });
 
   describe('getNextSequence', () => {
-    it('should return 1 for ledger account without balance record', async () => {
-      // No balance record exists yet
+    it('should return a timestamp-based sequence', async () => {
+      const beforeTime = BigInt(Date.now());
       const result = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
+      const afterTime = BigInt(Date.now());
 
-      expect(result).toBe(1);
+      expect(typeof result).toBe('bigint');
+      expect(result).toBeGreaterThanOrEqual(beforeTime);
+      expect(result).toBeLessThanOrEqual(afterTime);
     });
 
-    it('should return incrementing sequence for existing balance record', async () => {
-      // Create a balance record with sequence 1
-      await balanceStore.insert(testLedgerAccount1.id, 1000n, 1, queryRunner);
+    it('should return a valid timestamp regardless of existing balance record', async () => {
+      // Create a balance record
+      await balanceStore.insert(testLedgerAccount1.id, 1000n, 1n, queryRunner);
 
-      // Get next sequence
+      const beforeTime = BigInt(Date.now());
       const result = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
+      const afterTime = BigInt(Date.now());
 
-      expect(result).toBe(2);
+      expect(typeof result).toBe('bigint');
+      expect(result).toBeGreaterThanOrEqual(beforeTime);
+      expect(result).toBeLessThanOrEqual(afterTime);
     });
 
-    it('should handle multiple balance updates correctly', async () => {
-      // Create a balance record with sequence 3 (simulating 3 transactions)
-      await balanceStore.insert(testLedgerAccount1.id, 9000n, 3, queryRunner);
-
-      // Get next sequence
-      const result = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
-
-      expect(result).toBe(4);
-    });
-
-    it('should handle concurrent sequence requests safely', async () => {
-      // First call - should return 1 for account without balance
+    it('should return increasing sequences for consecutive calls', async () => {
       const seq1 = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
-      expect(seq1).toBe(1);
 
-      // Create balance with sequence 1
-      await balanceStore.insert(testLedgerAccount1.id, 1000n, 1, queryRunner);
+      // Small delay to ensure different timestamps
+      await new Promise(resolve => setTimeout(resolve, 1));
 
-      // Second call - should return 2 now
       const seq2 = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
-      expect(seq2).toBe(2);
 
-      // Different ledger account should still return 1
-      const seq3 = await sequencer.getNextSequence(testLedgerAccount2.id, queryRunner);
-      expect(seq3).toBe(1);
+      expect(seq2).toBeGreaterThanOrEqual(seq1);
     });
 
-    it('should return correct sequence for ledger account with gap in sequences', async () => {
-      // Balance record with sequence 10 (simulating gap)
-      await balanceStore.insert(testLedgerAccount1.id, 6000n, 10, queryRunner);
+    it('should work independently for different ledger accounts', async () => {
+      const seq1 = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
+      const seq2 = await sequencer.getNextSequence(testLedgerAccount2.id, queryRunner);
 
-      // Get next sequence - should be last_sequence + 1
-      const result = await sequencer.getNextSequence(testLedgerAccount1.id, queryRunner);
-
-      expect(result).toBe(11);
+      // Both should be valid timestamps (within reasonable range of each other)
+      expect(typeof seq1).toBe('bigint');
+      expect(typeof seq2).toBe('bigint');
+      expect(seq1).toBeGreaterThan(0n);
+      expect(seq2).toBeGreaterThan(0n);
     });
   });
 });

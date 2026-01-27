@@ -34,7 +34,7 @@ describe('LedgerServiceImpl', () => {
     ledgerAccountId: string,
     debit: bigint,
     credit: bigint,
-    sequence: number
+    sequence: bigint
   ): LedgerLine => ({
     id,
     transactionId,
@@ -85,10 +85,10 @@ describe('LedgerServiceImpl', () => {
         ],
       };
 
-      mockSequencer.getNextSequence.mockResolvedValue(1);
+      mockSequencer.getNextSequence.mockResolvedValue(1n);
       mockLedgerLineStore.insert.mockResolvedValue([
-        createLedgerLine('line-1', 'tx-123', 'ledger-1', 1000n, 0n, 1),
-        createLedgerLine('line-2', 'tx-123', 'ledger-2', 0n, 1000n, 1),
+        createLedgerLine('line-1', 'tx-123', 'ledger-1', 1000n, 0n, 1n),
+        createLedgerLine('line-2', 'tx-123', 'ledger-2', 0n, 1000n, 1n),
       ]);
 
       await ledgerService.post(journal, mockQueryRunner);
@@ -109,12 +109,12 @@ describe('LedgerServiceImpl', () => {
       };
 
       mockSequencer.getNextSequence
-        .mockResolvedValueOnce(5) // First call for ledger-1
-        .mockResolvedValueOnce(3); // Second call for ledger-2
+        .mockResolvedValueOnce(5n) // First call for ledger-1
+        .mockResolvedValueOnce(3n); // Second call for ledger-2
 
       mockLedgerLineStore.insert.mockResolvedValue([
-        createLedgerLine('line-1', 'tx-123', 'ledger-1', 1000n, 0n, 5),
-        createLedgerLine('line-2', 'tx-123', 'ledger-2', 0n, 1000n, 3),
+        createLedgerLine('line-1', 'tx-123', 'ledger-1', 1000n, 0n, 5n),
+        createLedgerLine('line-2', 'tx-123', 'ledger-2', 0n, 1000n, 3n),
       ]);
 
       await ledgerService.post(journal, mockQueryRunner);
@@ -136,12 +136,12 @@ describe('LedgerServiceImpl', () => {
       };
 
       mockSequencer.getNextSequence
-        .mockResolvedValueOnce(1)
-        .mockResolvedValueOnce(1);
+        .mockResolvedValueOnce(1n)
+        .mockResolvedValueOnce(1n);
 
       mockLedgerLineStore.insert.mockResolvedValue([
-        createLedgerLine('line-1', 'tx-123', 'ledger-1', 1000n, 0n, 1),
-        createLedgerLine('line-2', 'tx-123', 'ledger-2', 0n, 1000n, 1),
+        createLedgerLine('line-1', 'tx-123', 'ledger-1', 1000n, 0n, 1n),
+        createLedgerLine('line-2', 'tx-123', 'ledger-2', 0n, 1000n, 1n),
       ]);
 
       await ledgerService.post(journal, mockQueryRunner);
@@ -153,14 +153,14 @@ describe('LedgerServiceImpl', () => {
             ledgerAccountId: 'ledger-1',
             debit: 1000n,
             credit: 0n,
-            sequence: 1,
+            sequence: 1n,
           }),
           expect.objectContaining({
             transactionId: 'tx-123',
             ledgerAccountId: 'ledger-2',
             debit: 0n,
             credit: 1000n,
-            sequence: 1,
+            sequence: 1n,
           }),
         ]),
         mockQueryRunner
@@ -179,11 +179,11 @@ describe('LedgerServiceImpl', () => {
       };
 
       const expectedLines = [
-        createLedgerLine('line-1', 'tx-123', 'ledger-1', 1000n, 0n, 1),
-        createLedgerLine('line-2', 'tx-123', 'ledger-2', 0n, 1000n, 1),
+        createLedgerLine('line-1', 'tx-123', 'ledger-1', 1000n, 0n, 1n),
+        createLedgerLine('line-2', 'tx-123', 'ledger-2', 0n, 1000n, 1n),
       ];
 
-      mockSequencer.getNextSequence.mockResolvedValue(1);
+      mockSequencer.getNextSequence.mockResolvedValue(1n);
       mockLedgerLineStore.insert.mockResolvedValue(expectedLines);
 
       const result = await ledgerService.post(journal, mockQueryRunner);
