@@ -88,6 +88,63 @@ async function main(): Promise<Container> {
     );
     console.log(`bUser Balance: ${bUserBalance} USD`);
 
+
+    //auser Deposit then reverse
+    const depositToReverseAmount = 5000n;
+    const depositTx = await container.transactionService.deposit({
+      accountId: aUser.account.id,
+      amount: depositToReverseAmount,
+      currency: 'USD',
+      reference: 'Deposit to be reversed for aUser',
+      description: 'Funding aUser account for reversal',
+    });
+    console.log(`Deposited ${formatCents(depositToReverseAmount)} USD to aUser for reversal`);
+
+    const aUserBalanceBeforeReversal = await container.accountService.getUserBalanceFormatted(
+      aUser.account.id
+    );
+    console.log(`aUser Balance before reversal: ${aUserBalanceBeforeReversal} USD`);
+
+    await container.transactionService.reverse(depositTx.transactionId);
+    console.log(`Reversed deposit transaction ${depositTx.transactionId} for aUser`);
+
+
+    const aUserBalanceAfterReversal = await container.accountService.getUserBalanceFormatted(
+      aUser.account.id
+    );
+    console.log(`aUser Balance after reversal: ${aUserBalanceAfterReversal} USD`);
+
+    //aUser balance before reversal
+
+    const aUserBalanceBeforeWithdrawReversal = await container.accountService.getUserBalanceFormatted(
+      aUser.account.id
+    );
+    console.log(`aUser Balance before withdrawal reversal: ${aUserBalanceBeforeWithdrawReversal} USD`);
+
+    //aUser Withdrawal then reverse
+    const withdrawToReverseAmount = 3000n;
+    const withdrawTx = await container.transactionService.withdraw({
+      accountId: aUser.account.id,
+      amount: withdrawToReverseAmount,
+      currency: 'USD',
+      reference: 'Withdrawal to be reversed for aUser',
+      description: 'Withdrawing funds for reversal',
+    });
+    console.log(`Withdrew ${formatCents(withdrawToReverseAmount)} USD from aUser for reversal`);
+
+    const aUserBalanceAfterWithdraw = await container.accountService.getUserBalanceFormatted(
+      aUser.account.id
+    );
+    console.log(`aUser Balance after withdrawal: ${aUserBalanceAfterWithdraw} USD`);
+
+    await container.transactionService.reverse(withdrawTx.transactionId);
+    console.log(`Reversed withdrawal transaction ${withdrawTx.transactionId} for aUser`);
+
+    const aUserBalanceAfterWithdrawReversal = await container.accountService.getUserBalanceFormatted(
+      aUser.account.id
+    );
+    console.log(`aUser Balance after withdrawal reversal: ${aUserBalanceAfterWithdrawReversal} USD`);
+
     console.log('Initial setup completed');
 
 

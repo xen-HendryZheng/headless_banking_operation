@@ -18,6 +18,7 @@ export class TypeOrmTransactionStore implements TransactionStore {
   ): Promise<TransactionHeader> {
 
     const transactionEntity = new TransactionEntity();
+    transactionEntity.parentTransactionId = input.parentTransactionId || null;
     transactionEntity.ledgerAccountId = input.ledgerAccountId;
     transactionEntity.accountId = input.accountId;
     transactionEntity.type = input.type;

@@ -24,6 +24,9 @@ export class TransactionEntity {
   @Column({ name: 'ledger_account_id', type: 'uuid' })
   ledgerAccountId!: string;
 
+  @Column({ name: 'parent_transaction_id', type: 'uuid', nullable: true})
+  parentTransactionId!: string | null;
+
   @Column({ name: 'counterparty_ledger_account_id', type: 'uuid', nullable: true })
   counterpartyLedgerAccountId!: string | null;
 

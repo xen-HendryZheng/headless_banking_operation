@@ -7,6 +7,7 @@ import { TransactionStore } from '../../services/transaction/TransactionStore';
 import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
 import { LedgerAccountStore } from '../../services/account/LedgerAccountStore';
+import { ReverseTransaction } from './ReverseTransaction';
 
 /**
  * Transaction service facade.
@@ -20,7 +21,7 @@ export class TransactionService implements Component {
     private readonly balanceService: BalanceService,
     private readonly ledgerAccountStore: LedgerAccountStore,
     private readonly dataSource: DataSource
-  ) {}
+  ) { }
 
   name(): string {
     return 'TransactionService';
@@ -66,5 +67,20 @@ export class TransactionService implements Component {
       this.dataSource
     );
     return tx.execute(input);
+  }
+
+  /**
+   * Reverse a transaction by its ID.
+   */
+
+  async reverse(trxId: string): Promise<TxResult> {
+    const reverseTx = new ReverseTransaction(
+      this.transactionStore,
+      this.ledgerService,
+      this.balanceService,
+      this.ledgerAccountStore,
+      this.dataSource
+    );
+    return reverseTx.execute({ trxId })
   }
 }

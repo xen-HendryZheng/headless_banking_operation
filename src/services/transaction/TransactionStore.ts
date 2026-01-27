@@ -34,6 +34,7 @@ export interface CreateTransactionInput {
   reference: string;
   description?: string;
   accountId: UUID;
+  parentTransactionId?: UUID;
 }
 
 /**
