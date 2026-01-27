@@ -4,7 +4,7 @@ import { UUID, Currency } from '../../domain/common/Types';
 import { JournalDraft, LedgerLine } from '../../domain/ledger/LedgerTypes';
 import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
-import { CreateTransactionInput, TransactionStore } from '../../services/transaction/TransactionStore';
+import { CreateTransactionInput, TransactionHeader, TransactionStore } from '../../services/transaction/TransactionStore';
 import { InvalidTransactionError, InsufficientBalanceError } from '../../domain/common/DomainErrors';
 import { LedgerAccountType, TransactionType } from '../../stores/entities/enums';
 import { LedgerAccountStore } from '../../services/account/LedgerAccountStore';
@@ -138,7 +138,7 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
     }
   }
 
-  protected async createTransactionHeader(input: TransferInput): Promise<UUID> {
+  protected async createTransactionHeader(input: TransferInput): Promise<TransactionHeader> {
     const transactionInput: CreateTransactionInput = {
       accountId: input.senderAccountId,
       type: TransactionType.TRANSFER,
@@ -152,7 +152,11 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
     };
 
     const header = await this.transactionStore.createHeader(transactionInput, this.queryRunner);
-    return header.id;
+    return header;
+  }
+
+   protected async createFeeTransactionHeader(transactionHeader: TransactionHeader): Promise<TransactionHeader> {
+    throw new Error("Not done");
   }
 
   protected async buildJournal(txId: UUID, input: TransferInput): Promise<JournalDraft> {
@@ -186,6 +190,10 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
         },
       ]
     };
+  }
+
+  protected async buildJournalForFees(transactionLedgerLines: LedgerLine[], transactionHeader: TransactionHeader): Promise<JournalDraft> {
+    throw new Error("Not done yet");
   }
 
   protected async postLedger(journal: JournalDraft): Promise<LedgerLine[]> {

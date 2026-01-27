@@ -58,6 +58,16 @@ export class AccountServiceImpl implements AccountService {
         queryRunner
       );
 
+      await this.ledgerAccountStore.create(
+        {
+          accountId: account.id,
+          currency: input.currency,
+          type: LedgerAccountType.FIRSTCIRCLE_REVENUE,
+          metadata: input.metadata,
+        },
+        queryRunner
+      );
+
       await this.balanceStore.insert(
         ledgerAccount.id,
         BigInt(0),

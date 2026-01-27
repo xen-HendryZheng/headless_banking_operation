@@ -25,6 +25,7 @@ export interface TransactionHeader {
  * Input for creating a transaction header.
  */
 export interface CreateTransactionInput {
+  parentTransactionId?: UUID | null;
   ledgerAccountId: UUID;
   counterpartyLedgerAccountId?: UUID | null;
   type: TransactionType;

@@ -4,7 +4,7 @@ import { UUID, Currency } from '../../domain/common/Types';
 import { JournalDraft, LedgerLine } from '../../domain/ledger/LedgerTypes';
 import { LedgerService } from '../../services/ledger/LedgerService';
 import { BalanceService } from '../../services/balance/BalanceService';
-import { CreateTransactionInput, TransactionStore } from '../../services/transaction/TransactionStore';
+import { CreateTransactionInput, TransactionHeader, TransactionStore } from '../../services/transaction/TransactionStore';
 import { InvalidTransactionError } from '../../domain/common/DomainErrors';
 import { LedgerAccountType, TransactionType } from '../../stores/entities/enums';
 import { LedgerAccountStore } from '../../services/account/LedgerAccountStore';
@@ -30,6 +30,7 @@ export interface DepositInput {
 interface ResolvedDepositAccounts {
   userCashLedgerAccountId: UUID;
   bankLiabilityLedgerAccountId: UUID;
+  bankRevenueLedgerAccountId: UUID;
 }
 
 /**
@@ -52,6 +53,7 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
   ) {
     super();
     this.queryRunner = this.dataSource.createQueryRunner();
+    this.setFeesEnabled(true);
   }
 
   name(): string {
@@ -94,6 +96,11 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
       LedgerAccountType.FIRSTCIRCLE_BUSINESS_LIABILITY,
       this.queryRunner
     );
+    const bankRevenueLedgerAccountId = await this.ledgerAccountStore.findByAccountIdAndType(
+      accountId,
+      LedgerAccountType.FIRSTCIRCLE_REVENUE,
+      this.queryRunner
+    );
 
     if (!userCash) {
       throw new InvalidTransactionError('User cash ledger account not found');
@@ -101,10 +108,14 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
     if (!bankLiability) {
       throw new InvalidTransactionError('Bank liability ledger account not found');
     }
+    if (!bankRevenueLedgerAccountId) {
+      throw new InvalidTransactionError('Failed setup account, please contact support');
+    }
 
     return {
       userCashLedgerAccountId: userCash.id,
       bankLiabilityLedgerAccountId: bankLiability.id,
+      bankRevenueLedgerAccountId: bankRevenueLedgerAccountId.id
     };
   }
 
@@ -120,7 +131,7 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
     return Promise.resolve();
   }
 
-  protected async createTransactionHeader(input: DepositInput): Promise<UUID> {
+  protected async createTransactionHeader(input: DepositInput): Promise<TransactionHeader> {
     const transactionInput: CreateTransactionInput = {
       accountId: input.accountId,
       type: TransactionType.DEPOSIT,
@@ -134,7 +145,25 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
     };
 
     const header = await this.transactionStore.createHeader(transactionInput, this.queryRunner);
-    return header.id;
+    return header;
+  }
+
+  protected async createFeeTransactionHeader(transactionHeader: TransactionHeader): Promise<TransactionHeader> {
+    const transactionInput: CreateTransactionInput = {
+      parentTransactionId: transactionHeader.id,
+      accountId: transactionHeader.accountId,
+      type: TransactionType.FEE,
+      ledgerAccountId: this.resolvedAccounts.userCashLedgerAccountId,
+      counterpartyLedgerAccountId: null,
+      isCredit: false, // user's perspective - deducting balance for fees
+      amount: this.calculateFees(transactionHeader.amount),
+      currency: transactionHeader.currency,
+      reference: transactionHeader.reference || '',
+      description: `Fees charged from trx : ${transactionHeader.id}`
+    };
+
+    const header = await this.transactionStore.createHeader(transactionInput, this.queryRunner);
+    return header;
   }
 
   protected async buildJournal(txId: UUID, input: DepositInput): Promise<JournalDraft> {
@@ -170,11 +199,43 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
     };
   }
 
+  protected async buildJournalForFees(transactionLedgerLines: LedgerLine[], transactionHeader: TransactionHeader): Promise<JournalDraft> {
+    const { userCashLedgerAccountId, bankRevenueLedgerAccountId } = this.resolvedAccounts;
+    const [latestBankRevenueLine, latestUserCashLine] = await Promise.all([
+      this.ledgerService.getLatestLedgerLine(bankRevenueLedgerAccountId, this.queryRunner),
+      transactionLedgerLines.find( line => line.ledgerAccountId === userCashLedgerAccountId)
+    ]);
+
+    return {
+      transactionId: transactionHeader.id,
+      type: TransactionType.FEE,
+      currency: transactionHeader.currency,
+      lines: [
+        {
+          ledgerAccountId: bankRevenueLedgerAccountId,
+          accountId: transactionHeader.accountId,
+          debit: latestBankRevenueLine?.debit ?? 0n,
+          credit: (latestBankRevenueLine?.credit ?? 0n) + transactionHeader.amount,
+          amount: transactionHeader.amount,
+          isDebit: false,
+        },
+        {
+          ledgerAccountId: userCashLedgerAccountId,
+          accountId: transactionHeader.accountId,
+          debit: (latestUserCashLine?.debit ?? 0n) + transactionHeader.amount,
+          credit: latestUserCashLine?.credit ?? 0n,
+          amount: transactionHeader.amount,
+          isDebit: true,
+        },
+      ],
+    };
+  }
+
   protected async postLedger(journal: JournalDraft): Promise<LedgerLine[]> {
     return this.ledgerService.post(journal, this.queryRunner);
   }
 
-  protected async updateBalances(ledgerLines: LedgerLine[]): Promise<void> {
+  protected async updateBalances(ledgerLines: LedgerLine[], isDebit?: boolean): Promise<void> {
     // Only update balance for user cash accounts, not bank liability accounts
     // User line is the second one (index 1)
     const userLedgerLine = ledgerLines[1];
@@ -184,7 +245,7 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
 
     const balanceDelta = [{
       ledgerAccountId: userLedgerLine.ledgerAccountId,
-      delta: userLedgerLine.amount, // Positive delta for deposit
+      delta: isDebit ? -userLedgerLine.amount : userLedgerLine.amount, // Positive delta for deposit
       newSequence: userLedgerLine.sequence,
     }];
 

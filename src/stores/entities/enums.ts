@@ -19,6 +19,7 @@ export enum AccountStatus {
 export enum LedgerAccountType {
   USER_CASH = 'USER_CASH',
   FIRSTCIRCLE_BUSINESS_LIABILITY = 'FIRSTCIRCLE_BUSINESS_LIABILITY',
+  FIRSTCIRCLE_REVENUE = 'FIRSTCIRCLE_REVENUE',
 }
 
 /**
@@ -36,6 +37,7 @@ export enum TransactionType {
   DEPOSIT = 'DEPOSIT',
   WITHDRAW = 'WITHDRAW',
   TRANSFER = 'TRANSFER',
+  FEE = 'FEE',
 }
 
 /**

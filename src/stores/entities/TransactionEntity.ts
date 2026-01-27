@@ -21,6 +21,9 @@ export class TransactionEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Column({ name: 'parent_transaction_id', type: 'uuid', nullable: true })
+  parentTransactionId!: string | null;
+
   @Column({ name: 'ledger_account_id', type: 'uuid' })
   ledgerAccountId!: string;
 
