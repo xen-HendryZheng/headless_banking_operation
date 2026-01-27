@@ -141,7 +141,7 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
   protected async createTransactionHeader(input: TransferInput): Promise<UUID> {
     const transactionInput: CreateTransactionInput = {
       accountId: input.senderAccountId,
-      type: TransactionType.WITHDRAW,
+      type: TransactionType.TRANSFER,
       ledgerAccountId: this.resolvedAccounts.senderLedgerAccountId,
       counterpartyLedgerAccountId: this.resolvedAccounts.receiverLedgerAccountId,
       isCredit: false, // user's perspective - withdrawing funds
