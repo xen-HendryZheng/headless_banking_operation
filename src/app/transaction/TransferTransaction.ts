@@ -32,6 +32,7 @@ export interface TransferInput {
 interface ResolvedTransferAccounts {
   senderLedgerAccountId: UUID;
   receiverLedgerAccountId: UUID;
+  bankRevenueLedgerAccountId: UUID;
 }
 
 /**
@@ -98,6 +99,11 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
       LedgerAccountType.USER_CASH,
       this.queryRunner
     );
+    const bankRevenueLedgerAccountId = await this.ledgerAccountStore.findByAccountIdAndType(
+      input.receiverAccountId,
+      LedgerAccountType.FIRSTCIRCLE_REVENUE,
+      this.queryRunner
+    );
 
     if (!senderCash) {
       throw new InvalidTransactionError('Sender ledger account not found');
@@ -105,10 +111,14 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
     if (!receiverCash) {
       throw new InvalidTransactionError('Receiver ledger account not found');
     }
+    if (!bankRevenueLedgerAccountId) {
+      throw new InvalidTransactionError('Invalid account setup');
+    }
 
     return {
       senderLedgerAccountId: senderCash.id,
       receiverLedgerAccountId: receiverCash.id,
+      bankRevenueLedgerAccountId: bankRevenueLedgerAccountId.id
     };
   }
 
@@ -189,7 +199,38 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
   }
 
   protected async buildJournalForFees(transactionLedgerLines: LedgerLine[], transactionHeader: TransactionHeader): Promise<JournalDraft> {
-    throw new Error("Not done yet");
+    const { receiverLedgerAccountId, bankRevenueLedgerAccountId } = this.resolvedAccounts;
+    const [latestBankRevenueLine, latestUserCashLine] = await Promise.all([
+      this.ledgerService.getLatestLedgerLine(bankRevenueLedgerAccountId, this.queryRunner),
+      transactionLedgerLines.find( line => line.ledgerAccountId === receiverLedgerAccountId)
+    ]);
+    const feeAmount = this.calculateFees(transactionHeader.amount);
+
+    return {
+      transactionId: transactionHeader.id,
+      type: TransactionType.FEE,
+      currency: transactionHeader.currency,
+      lines: [
+        {
+          ledgerAccountId: bankRevenueLedgerAccountId,
+          accountId: transactionHeader.accountId,
+          debit: latestBankRevenueLine?.debit ?? 0n,
+          credit: (latestBankRevenueLine?.credit ?? 0n) + feeAmount,
+          amount: feeAmount,
+          description: `Fee for transaction ${transactionHeader.id}`,
+          isDebit: false,
+        },
+        {
+          ledgerAccountId: receiverLedgerAccountId,
+          accountId: transactionHeader.accountId,
+          debit: (latestUserCashLine?.debit ?? 0n) + feeAmount,
+          credit: latestUserCashLine?.credit ?? 0n,
+          description: `Fee for transaction ${transactionHeader.id}`,
+          amount: feeAmount,
+          isDebit: true,
+        },
+      ],
+    };
   }
 
   protected async postLedger(journal: JournalDraft): Promise<LedgerLine[]> {
