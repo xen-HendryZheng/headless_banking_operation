@@ -39,6 +39,9 @@ export class LedgerLineEntity {
   @Column({ type: 'bigint', transformer: new BigIntTransformer() })
   sequence!: bigint;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  description?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

@@ -54,8 +54,7 @@ export abstract class BaseTransactionCore<I>
      * This only applies if transaction set fees enabled
      */
     if (this.feesEnabled) {
-      const transactionFeeHeader = await this.createFeeTransactionHeader(transactionHeader);
-      const journalFee = await this.buildJournalForFees(ledgerLines, transactionFeeHeader);
+      const journalFee = await this.buildJournalForFees(ledgerLines, transactionHeader);
       const feeLedgerLines = await this.postLedger(journalFee);
       await this.updateBalances(feeLedgerLines, true);
     }
@@ -80,12 +79,6 @@ export abstract class BaseTransactionCore<I>
   protected abstract createTransactionHeader(input: I): Promise<TransactionHeader>;
 
   /**
-   * 
-   * Creates transaction header for fee
-   */
-  protected abstract createFeeTransactionHeader(transactionHeader: TransactionHeader): Promise<TransactionHeader>;
-
-  /**
    * Builds the journal draft from the transaction ID and input.
    */
   protected abstract buildJournal(txId: UUID, input: I): Promise<JournalDraft>;
@@ -93,7 +86,7 @@ export abstract class BaseTransactionCore<I>
   /**
    * Builds journal draft for fees
    */
-  protected abstract buildJournalForFees(transactionLedgerLines: LedgerLine[], transactionFeeHeader: TransactionHeader): Promise<JournalDraft>;
+  protected abstract buildJournalForFees(transactionLedgerLines: LedgerLine[], transactionHeader: TransactionHeader): Promise<JournalDraft>;
 
   // ===== Shared components (injected) =====
 

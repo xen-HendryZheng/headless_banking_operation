@@ -12,6 +12,7 @@ export interface LedgerLineDraft {
   amount: bigint;
   /** Whether this line is a debit (true) or credit (false) for this transaction */
   isDebit: boolean;
+  description?: string;
 }
 
 /**

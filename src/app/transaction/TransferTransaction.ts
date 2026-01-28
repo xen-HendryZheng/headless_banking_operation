@@ -155,10 +155,6 @@ export class TransferTransaction extends BaseTransactionCore<TransferInput> {
     return header;
   }
 
-   protected async createFeeTransactionHeader(transactionHeader: TransactionHeader): Promise<TransactionHeader> {
-    throw new Error("Not done");
-  }
-
   protected async buildJournal(txId: UUID, input: TransferInput): Promise<JournalDraft> {
     const { senderLedgerAccountId, receiverLedgerAccountId } = this.resolvedAccounts;
 

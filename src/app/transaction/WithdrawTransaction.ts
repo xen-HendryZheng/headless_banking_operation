@@ -145,10 +145,6 @@ export class WithdrawTransaction extends BaseTransactionCore<WithdrawInput> {
     return header;
   }
 
-  protected async createFeeTransactionHeader(transactionHeader: TransactionHeader): Promise<TransactionHeader> {
-    throw new Error("Not done");
-  }
-
   protected async buildJournal(txId: UUID, input: WithdrawInput): Promise<JournalDraft> {
     const { userCashLedgerAccountId, bankLiabilityLedgerAccountId } = this.resolvedAccounts;
 

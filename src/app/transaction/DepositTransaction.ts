@@ -148,24 +148,6 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
     return header;
   }
 
-  protected async createFeeTransactionHeader(transactionHeader: TransactionHeader): Promise<TransactionHeader> {
-    const transactionInput: CreateTransactionInput = {
-      parentTransactionId: transactionHeader.id,
-      accountId: transactionHeader.accountId,
-      type: TransactionType.FEE,
-      ledgerAccountId: this.resolvedAccounts.userCashLedgerAccountId,
-      counterpartyLedgerAccountId: null,
-      isCredit: false, // user's perspective - deducting balance for fees
-      amount: this.calculateFees(transactionHeader.amount),
-      currency: transactionHeader.currency,
-      reference: transactionHeader.reference || '',
-      description: `Fees charged from trx : ${transactionHeader.id}`
-    };
-
-    const header = await this.transactionStore.createHeader(transactionInput, this.queryRunner);
-    return header;
-  }
-
   protected async buildJournal(txId: UUID, input: DepositInput): Promise<JournalDraft> {
     const { userCashLedgerAccountId, bankLiabilityLedgerAccountId } = this.resolvedAccounts;
 
@@ -205,6 +187,7 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
       this.ledgerService.getLatestLedgerLine(bankRevenueLedgerAccountId, this.queryRunner),
       transactionLedgerLines.find( line => line.ledgerAccountId === userCashLedgerAccountId)
     ]);
+    const feeAmount = this.calculateFees(transactionHeader.amount);
 
     return {
       transactionId: transactionHeader.id,
@@ -215,16 +198,18 @@ export class DepositTransaction extends BaseTransactionCore<DepositInput> {
           ledgerAccountId: bankRevenueLedgerAccountId,
           accountId: transactionHeader.accountId,
           debit: latestBankRevenueLine?.debit ?? 0n,
-          credit: (latestBankRevenueLine?.credit ?? 0n) + transactionHeader.amount,
-          amount: transactionHeader.amount,
+          credit: (latestBankRevenueLine?.credit ?? 0n) + feeAmount,
+          amount: feeAmount,
+          description: `Fee for transaction ${transactionHeader.id}`,
           isDebit: false,
         },
         {
           ledgerAccountId: userCashLedgerAccountId,
           accountId: transactionHeader.accountId,
-          debit: (latestUserCashLine?.debit ?? 0n) + transactionHeader.amount,
+          debit: (latestUserCashLine?.debit ?? 0n) + feeAmount,
           credit: latestUserCashLine?.credit ?? 0n,
-          amount: transactionHeader.amount,
+          description: `Fee for transaction ${transactionHeader.id}`,
+          amount: feeAmount,
           isDebit: true,
         },
       ],

@@ -38,6 +38,7 @@ export class LedgerServiceImpl implements LedgerService {
       credit: line.credit,
       amount: line.amount,
       sequence: sequences[index],
+      description: line.description,
     }));
 
     return this.ledgerLineStore.insert(inserts, queryRunner);

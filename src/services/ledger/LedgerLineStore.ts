@@ -13,6 +13,7 @@ export interface LedgerLineInsert {
   credit: bigint;
   amount: bigint;
   sequence: bigint;
+  description?: string;
 }
 
 /**

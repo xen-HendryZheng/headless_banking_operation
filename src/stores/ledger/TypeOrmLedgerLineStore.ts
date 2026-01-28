@@ -19,6 +19,7 @@ export class TypeOrmLedgerLineStore implements LedgerLineStore {
       entity.debit = line.debit;
       entity.credit = line.credit;
       entity.createdAt = new Date();
+      entity.description = line.description;
       return entity;
     });
     const savedEntities = await queryRunner.manager.save(entities);
